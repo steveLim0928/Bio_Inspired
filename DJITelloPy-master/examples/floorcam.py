@@ -30,4 +30,3 @@ drone_feed.release()
 cv2.destroyAllWindows()
 tello.streamoff()
 tello.land()
-s
