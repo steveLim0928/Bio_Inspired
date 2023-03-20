@@ -1,9 +1,17 @@
 from djitellopy import Tello
 import time
-
+import math
 # create and connect
 tello = Tello()
 tello.connect()
+
+
+# Set the IMU calibration
+#tello()
+
+# Wait for the calibration to complete
+time.sleep(5)
+
 
 # configure drone
 tello.enable_mission_pads()
@@ -25,9 +33,69 @@ tello.set_mission_pad_detection_direction(2)  #
 print(dist_z)
 print(dist_x)
 print(dist_y)
+def round_to_nearest_5(x):
+    return round(x / 5) * 5
+def move_drone(x, y):
+    movements = []
+    while x > 4 or x < -4 and y > 4 or y < -4:
+        if x > 0:
+            if x < 20:
+                movements.append((20, 0))
+                x += 20
+                movements.append((-(x), 0))
+                x = 0
+            else:
+                movements.append((-20, 0))
+                x -= 20
+        if x < 0:
+            if x > -20:
+                movements.append((20, 0))
+                x -= 20
+                movements.append(((x), 0))
+                x = 0
+            else:
+                movements.append((-20, 0))
+                x += 20
+        
+        if y > 0:
+            if y < 20:
+                movements.append((0, 20))
+                y += 20
+                movements.append((0, -(y)))
+                y = 0
+            else:
+                movements.append((0, -20))
+                y -= 20
+        if y < 0:
+            if y > -20:
+                movements.append((0, 20))
+                y += 20
+                movements.append((0, (y)))
+                y = 0
+            else:
+                movements.append((0, -20))
+                y += 20
+
+        
+        
 
 
-while dist_z != 0 or (dist_y > 20 or dist_y < -20) or (dist_x > 20 or dist_x < -20):
+
+    return movements
+
+pad = tello.get_mission_pad_id()
+
+dist_x = tello.get_mission_pad_distance_x()
+dist_y = tello.get_mission_pad_distance_y()
+dist_z = tello.get_mission_pad_distance_z()
+print("Distance` pad in X: ",  dist_x, "Y: ", dist_y, "Z: ", dist_z)
+print("PAD DETECTED: ", pad)
+
+
+
+
+last_z = 100
+while dist_z > 50 or (dist_y > 3 or dist_y < -3) or (dist_x > 3 or dist_x < -3):
     #if detected_pads == [3]:
      #   tello.move_back(30)
     #    tello.rotate_clockwise(90)
@@ -38,46 +106,90 @@ while dist_z != 0 or (dist_y > 20 or dist_y < -20) or (dist_x > 20 or dist_x < -
 
     # Get distance from pad
     try:
+
+
+       
+        if pad == -1:
+            tello.move_up(40)
+        else: 
+
+            # Move towards pad
+            #if dist_z > 70  and dist_y < 5 and dist_x < 5 and dist_x > -5 and dist_y > -5:
+             #   print(dist_z)
+            #    tello.move_down(20)
+
+           
+            
+            if last_z > 40:
+                last_z -= 10
+
+         
+            tello.go_xyz_speed_mid(0, 0, dist_z - 10, 10, pad)
+            #tello.go_xyz_speed_mid(0, dist_y, dist_z, 10, pad)
+            #tello.go_xyz_speed_mid(dist_x, dist_y, dist_z, 10, pad)
+            #if dist_z < 80:
+            #    tello.go_xyz_speed(dist_x, dist_y, dist_z, 10)        
+            #else:
+            #    tello.go_xyz_speed(dist_x, dist_y, dist_z, 10)        
+                
+
+            time.sleep(1)
+
+
+        
+        pad = tello.get_mission_pad_id()
+
+        
+        dist_x = tello.get_mission_pad_distance_x()
+        dist_y = tello.get_mission_pad_distance_y()
+        dist_z = tello.get_mission_pad_distance_z()
+        print("Distance` pad in X: ",  dist_x, "Y: ", dist_y, "Z: ", dist_z)
+        print("PAD DETECTED: ", pad)
+        
+
+
+        
+        '''else:
+
+
+
+
+            movements = move_drone(dist_y, dist_x)
+
+            for movement in movements:
+                if movement[1] != 0:
+                    if movement[1] > 0:
+                        tello.move_left(movement[1])
+                    else:
+                        tello.move_right(-movement[1])
+
+                else:
+                    if movement[0] > 0:
+                        tello.move_forward(movement[0])
+                    else:
+                        tello.move_back(-movement[0])
+
+            
+
         pad = tello.get_mission_pad_id()
 
         dist_x = tello.get_mission_pad_distance_x()
         dist_y = tello.get_mission_pad_distance_y()
         dist_z = tello.get_mission_pad_distance_z()
-        (f"Distance        ` pad in X: {dist_x} cm, Y: {dist_y} cm, Z: {dist_z} cm")
-
+        print("Distance` pad in X: ",  dist_x, "Y: ", dist_y, "Z: ", dist_z)
         print("PAD DETECTED: ", pad)
-        if pad == -1:
-            tello.move_up(20)
-        else: 
-            tello.go_xyz_speed_mid(dist_x, dist_y, dist_z, 10, pad)
-            #tello.go_xyz_speed(dist_x, dist_y, dist_z, 10)
-
-
-
-
-        '''
-
-        elif dist_z > 30:
-            tello.move_down(20)
-        elif dist_z < 30:
-            tello.land()
-        '''
+    '''
+        
     except KeyboardInterrupt:
         tello.land()
         print("NOT WORKING2")
 
-    # Move towards pad
-    '''if dist_y > 20:
-        tello.move_forward(20)
-    elif dist_y < -20:
-        tello.move_back(20)
-
-    if dist_x > 20:
-        tello.move_right(20)
-    elif dist_x < -20:
-        tello.move_left(20)
-    '''
+  
     
+
+
+
+  
     
 
         
