@@ -2,6 +2,7 @@ import time
 import numpy as np
 #from utils import plot_line
 from gpiozero import RotaryEncoder
+# Nothing, just for testing
 
 # FIT0521
 ppr = 341
