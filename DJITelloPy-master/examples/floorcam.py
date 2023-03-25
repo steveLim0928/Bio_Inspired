@@ -60,4 +60,8 @@ while True:
 drone_feed.release()
 cv2.destroyAllWindows()
 tello.streamoff()
+<<<<<<< HEAD
 tello.land()
+=======
+tello.land()
+>>>>>>> ca0eb6c775deef0ec777bd03fa3304cfc0f15aba
