@@ -1,62 +1,45 @@
 import cv2
 import numpy as np
-# Camera intrinsics
+
+# Define the camera matrix and distortion coefficient
 #fx = 220.915
 #fy = 220.915
 #cx = 157.073
 #cy = 119.555
 
-fx = 3.45328364e+09
-fy = 8.42721069e+02
-cx = 157.073
-cy = 224.555
-camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
-distortion_coefficients = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
 
-# Size of Aruco marker in millimeters
-marker_size = 15.24
-board_size = (4, 4)
 
-# Load image from file
-img = cv2.imread("bottom_camera2.jpg")
-print(img)
-# Detect the marker in the image
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)
-aruco_params = cv2.aruco.DetectorParameters()
-detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
+def compute_distance(pixel_x, pixel_y, z):
+    fx = 433.44868
+    fy = 939.895
+    cx = 107
+    cy = 318.9
+    camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+    dist_coeffs = np.array([0.8333, 0.699, 0.455, 0.00159, -0.94509282], dtype=np.float32)
+    # Define the pixel coordinates
 
-markerCorners, markerIds, rejectedCandidates = detector.detectMarkers(img)
+    # Define the world coordinates
+    world_coords = np.array([[pixel_x, pixel_y]], dtype=np.float32)
 
-# Extract the position and orientation of the marker
-print(markerCorners)
-if len(markerCorners) > 0:
-    object_points = np.array([[0, 0, 0], [marker_size, 0, 0], [marker_size, marker_size, 0], [0, marker_size, 0]], dtype=np.float32)
+    # Undistort the image coordinates   
+    undistorted_coords = cv2.undistortPoints(world_coords, camera_matrix, dist_coeffs)
 
-    print(img.shape[1::-1])
-    print(object_points.shape)
-    print(np.shape(markerCorners))
+    #undistorted_coords = undistorted_coords.reshape((2, 1))
+    undistorted_coords = undistorted_coords.reshape((2, 1))
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPoints=[object_points],
-                                                    imagePoints=markerCorners,
-                                                    imageSize=img.shape[1::-1],
-                                                    cameraMatrix=None,
-                                                    distCoeffs=None)
-    print(mtx)
-    print(dist)
+    undistorted_coords = undistorted_coords.T
 
-    print(tvecs)
-    #rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(markerCorners, marker_size, camera_matrix, distortion_coefficients)
-    booleanVal, rvec, tvecs = cv2.solvePnP(object_points, markerCorners[0], camera_matrix, distortion_coefficients)
+    undistorted_coords = np.append(undistorted_coords, [[1]], axis=1)
 
-    print(tvecs)
-    x = tvecs[0][0]
-    y = tvecs[1][0]
-    z = tvecs[2][0]
-    print("Marker position: ({:.2f}, {:.2f}, {:.2f})".format(x, y, z))
-
+    # Calculate the perspective transformation matrix
+    perspective_matrix = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=np.float32)
+    perspective_matrix[2][2] = 1.0 / z
+    print(perspective_matrix)
+    # Apply the perspective transformation matrix to the undistorted coordinates
+    transformed_coords = np.dot(perspective_matrix, undistorted_coords.T)
+    x = transformed_coords[0][0]  * ZeroDivisionError()
+    y = transformed_coords[1][0]  * z
     # Calculate the x and y distances
-    drone_height = 84    # height of drone in cm
-    x_distance = x * (drone_height / z)
-    y_distance = y * (drone_height / z)
-    #print("Distance to marker: {:.2f} cm (x), {:.2f} cm (y)".format(x_distance, y_distance))
-    print("Distance to marker: {:.2f} cm (x), {:.2f} cm (y), {:.2f} cm (z)".format(x, y, drone_height))
+    #x = transformed_coords[0][0]
+    #y = transformed_coords[1][0]
+    return x,y
