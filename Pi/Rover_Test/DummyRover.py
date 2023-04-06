@@ -1,55 +1,86 @@
 import curses
 import RPi.GPIO as GPIO
 import MotorClass as MC
+from gpiozero import Servo, Motor
 
 screen = curses.initscr()
 curses.noecho() 
 curses.cbreak()
 screen.keypad(True)
 
-GPIO.setmode(GPIO.BOARD)
-#GPIO.setup(11,GPIO.OUT)
-#GPIO.setup(13,GPIO.OUT)
-#GPIO.setup(29,GPIO.OUT)
-#GPIO.setup(31,GPIO.OUT)
-#GPIO.setup(12,GPIO.OUT)
-#GPIO.output(37,True)
+#GPIO.setmode(GPIO.BCM)
 
-M1 = MC.Motor(11,13)
-M2 = MC.Motor(29,31)
+motorSpeed = 0.8
+
+#M1 = MC.Motor(17,10)
+rightMotor = Motor(17,10)
+leftMotor = Motor(27,22)
+#M2 = MC.Motor(27,22)
+
+leftServo = Servo (19, min_pulse_width = 0.0006, max_pulse_width = 0.0019)
+rightServo = Servo (26, min_pulse_width = 0.0006, max_pulse_width = 0.0019)
 
 try:
-    while True:   
+    temp = 1
+    while temp:   
         char = screen.getch()
-        if char == ord('q'):
-            GPIO.cleanup()
+        if char == ord('p'):
+            #GPIO.cleanup()
             break
         elif char == curses.KEY_UP:
             print("up")
-            M1.forward(20)
-            M2.forward(20)
+            leftMotor.forward(motorSpeed)
+            rightMotor.forward(motorSpeed)
+            #M1.forward(speed)
+            #M2.forward(speed)
         elif char == curses.KEY_DOWN:
             print("down")
-            M1.backward(20)
-            M2.backward(20)
+            leftMotor.backward(motorSpeed)
+            rightMotor.backward(motorSpeed)
+            #M1.backward(speed)
+            #M2.backward(speed)
         elif char == curses.KEY_RIGHT:
             print("right")
-            #GPIO.output(11,False)
-            #GPIO.output(13,True)
-            #GPIO.output(29,True)
-            #GPIO.output(31,False)
+            leftMotor.forward(motorSpeed)
+            rightMotor.backward(motorSpeed)
+            #M1.backward(speed)
+            #M2.forward(speed)
         elif char == curses.KEY_LEFT:
             print("left")
-            #GPIO.output(11,True)
-            #GPIO.output(13,False)
-            #GPIO.output(29,False)
-            #GPIO.output(31,True)
-        elif char == 10:
-            print("stop")   
-            M1.stop()
-            M2.stop()
-            
+            leftMotor.backward(motorSpeed)
+            rightMotor.forward(motorSpeed)
+            #M1.forward(speed)
+            #M2.backward(speed)
+        elif char == ord('s'):
+            print("stop") 
+            leftMotor.stop() 
+            rightMotor.stop()  
+            #M1.stop()
+            #M2.stop()
+        elif char == ord('i'):
+            motorSpeed += 0.1
+            if motorSpeed > 1:
+                motorSpeed = 1
+            print(motorSpeed)
+        elif char == ord('u'):
+            motorSpeed -= 0.1
+            if motorSpeed < 0.5:
+                motorSpeed = 0.5
+            print(motorSpeed)
+        elif char == ord('q'):
+            leftServo.value = -1
+        elif char == ord('w'):
+            leftServo.value = 0
+        elif char == ord('e'):
+            leftServo.value = 1
+        elif char == ord('r'):
+            rightServo.value = 1
+        elif char == ord('t'):
+            rightServo.value = 0
+        elif char == ord('y'):
+            rightServo.value = -1
 finally:
+    print("Closed")
     #Close down curses properly, inc turn echo back on!
     curses.nocbreak(); screen.keypad(0); curses.echo()
     curses.endwin()
