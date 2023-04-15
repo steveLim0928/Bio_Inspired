@@ -14,11 +14,11 @@ motorSpeed = 0.8
 
 #M1 = MC.Motor(17,10)
 rightMotor = Motor(17,10)
-leftMotor = Motor(27,22)
+leftMotor = Motor(22,27)
 #M2 = MC.Motor(27,22)
 
-leftServo = Servo (19, min_pulse_width = 0.0006, max_pulse_width = 0.0019)
-rightServo = Servo (26, min_pulse_width = 0.0006, max_pulse_width = 0.0019)
+leftServo = Servo (19, min_pulse_width = 0.001, max_pulse_width = 0.005)
+rightServo = Servo (26, min_pulse_width = 0.001, max_pulse_width = 0.005)
 
 try:
     temp = 1
