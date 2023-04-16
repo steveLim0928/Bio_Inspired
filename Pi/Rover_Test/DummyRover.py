@@ -1,5 +1,6 @@
 import curses
 import RPi.GPIO as GPIO
+from gpiozero.pins.pigpio import PiGPIOFactory
 import MotorClass as MC
 from gpiozero import Servo, Motor
 
@@ -17,8 +18,9 @@ rightMotor = Motor(17,10)
 leftMotor = Motor(22,27)
 #M2 = MC.Motor(27,22)
 
-leftServo = Servo (19, min_pulse_width = 0.001, max_pulse_width = 0.005)
-rightServo = Servo (26, min_pulse_width = 0.001, max_pulse_width = 0.005)
+factory = PiGPIOFactory()
+leftServo = Servo (19, min_pulse_width = 0.001, max_pulse_width = 0.005, pin_factory = factory)
+rightServo = Servo (26, min_pulse_width = 0.001, max_pulse_width = 0.005, pin_factory = factory)
 
 try:
     temp = 1

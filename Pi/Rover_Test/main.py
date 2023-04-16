@@ -1,22 +1,28 @@
 from smbus import SMBus
 import time
-#import curses
+import math
 from gpiozero import Button, Servo, Motor
+from gpiozero.pins.pigpio import PiGPIOFactory
 import numpy as np
 import LSM6DSO
 import pygame
 
 ####################### SETUP ####################### 
 
+factory = PiGPIOFactory()
+
 ##### IMU
 i2cbus = SMBus(1)
 LSM6DSOAddr = 0x6B
-INT1 = Button(13, pull_up = False)  
-INT2 = Button(6, pull_up = False)  
+INT1 = Button(13, pull_up = False, bounce_time = 0.001, pin_factory = factory)  
+INT2 = Button(6, pull_up = False, bounce_time = 0.001, pin_factory = factory)  
 acc = (0.0, 0.0, 0.0)
 gyro = (0.0, 0.0, 0.0)
+gyroRead = 0
+accRead = 0
 
 cummulativeAngle = 0.0
+yawAcc = 0.0
 
 gyroTimeNew = 0.0
 gyroTimeOld = 0.0
@@ -40,36 +46,45 @@ rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
 
 ##### Charging Plates
-leftServo = Servo (12, min_pulse_width = 0.0005, max_pulse_width = 0.0025)
-rightServo = Servo (16, min_pulse_width = 0.0005, max_pulse_width = 0.0025)
+
+leftServo = Servo (12, min_pulse_width = 0.0005, max_pulse_width = 0.0025, pin_factory = factory)
+rightServo = Servo (16, min_pulse_width = 0.0005, max_pulse_width = 0.0025, pin_factory = factory)
 
 ####################### FUNCTIONS ####################### 
 
 ##### IMU
 def LSM6DSO_readAcc():
-	global acc
+	global acc, accRead
+	accRead = 1
 	x = LSM6DSO.readAccX(LSM6DSOAddr, i2cbus)
 	y = LSM6DSO.readAccY(LSM6DSOAddr, i2cbus)
 	z = LSM6DSO.readAccZ(LSM6DSOAddr, i2cbus)
 	acc = (x, y, z)
+	return (x, y, z)
 	
 def LSM6DSO_readGyro():
-	global gyro, gyroTimeNew, gyroTimeOld
+	global gyro, gyroTimeNew, gyroTimeOld, gyroRead
+	gyroRead = 1;
 	gyroTimer = time.time()
 	x = LSM6DSO.readGyroX(LSM6DSOAddr, i2cbus)
 	y = LSM6DSO.readGyroY(LSM6DSOAddr, i2cbus)
 	z = LSM6DSO.readGyroZ(LSM6DSOAddr, i2cbus)
 	gyroTimeOld = gyroTimeNew
 	gyroTimeNew = time.time()
+	#print("Gyro Read")
 	gyro = (x, y, z)
 	return (x, y, z)
 	
 def IMU_Gyro_Cal():
+	global gyroRead, gyro
 	gyroCal = []
 	i = 0
-	while i < 100:
-		gyroCal.append(LSM6DSO_readGyro())
-		i += 1
+	while i < 300:
+		if gyroRead:
+			gyroCal.append(gyro)
+			gyroRead = 0
+			i += 1
+			print(i)
 	x = 0.0;
 	y = 0.0;
 	z = 0.0;
@@ -79,7 +94,28 @@ def IMU_Gyro_Cal():
 		y += temp[1]
 		z += temp[2]
 	
-	return (x/100, y/100, z/100)
+	return (x/(i+1), y/(i+1), z/(i+1))
+
+def IMU_Acc_Cal():
+	global accRead, acc
+	AccCal = []
+	i = 0
+	while i < 300:
+		if accRead:
+			AccCal.append(acc)
+			accRead = 0
+			i += 1
+			print(i)
+	x = 0.0;
+	y = 0.0;
+	z = 0.0;
+	for j in range(len(AccCal)):
+		temp = AccCal[j]
+		x += temp[0]
+		y += temp[1]
+		z += temp[2]
+	
+	return (x/(i+1), y/(i+1), z/(i+1))
 	
 INT1.when_pressed = LSM6DSO_readAcc
 INT2.when_pressed = LSM6DSO_readGyro
@@ -101,7 +137,9 @@ print("IMU initialised")
 print("Calibrate Gyro")
 time.sleep(5)
 gyroCal = IMU_Gyro_Cal();
+accCal = IMU_Acc_Cal();
 print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
+print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 
 run = True
 while run:
@@ -156,10 +194,25 @@ while run:
         rightServo.value = 0
     elif keys[pygame.K_y]:
         rightServo.value = -1
-    if abs((gyro[2] - gyroCal[2])/12.5) > 2:
-        cummulativeAngle += ((gyro[2] - gyroCal[2])/12.5)*pow((gyroTimeNew - gyroTimeOld),2)
-    print(cummulativeAngle)
-    print("")
+    if gyroRead:
+        cummulativeAngle += ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
+        gyroRead = 0
+        print(cummulativeAngle)
+    if accRead:
+        temp = round(math.floor(-(acc[1]-accCal[1])*100)/100.0,1)
+        temp2 = round(math.floor((acc[0]-accCal[0])*100)/100.0,1)
+        if temp == 0 or temp2 == 0:
+            yawAcc = 0
+        else:
+            yawAcc = 180 * math.atan2(temp, temp2) / math.pi
+        accRead = 0
+        print("%0.02f" % temp)
+        print("%0.02f" % temp2)
+        #print("%0.03f" % round(math.atan2(temp2, temp),3))
+        print(yawAcc)
+        print("")
+    
+    #print("")
 
 		
 print("Closed")
@@ -174,11 +227,13 @@ while False:
 	
 	#print("Gyro: %.4f, %.4f, %.4f" % (gyro))
 	#print("Yaw: %.4f" % (gyro[2] - gyroCal[2]))
-	print("Elapsed: %.4f" % (gyroTimeNew - gyroTimeOld))
-	if abs((gyro[2] - gyroCal[2])/125.0) > 2:
-		cummulativeAngle += ((gyro[2] - gyroCal[2])/125.0)*pow((gyroTimeNew - gyroTimeOld),2)
+	#print("Elapsed: %.4f" % (gyroTimeNew - gyroTimeOld))
+	if (abs((gyro[2] - gyroCal[2])) > 1 and gyroRead):
+		print((gyro[2] - gyroCal[2])*(gyroTimeNew - gyroTimeOld))
+		cummulativeAngle += (gyro[2] - gyroCal[2])*(gyroTimeNew - gyroTimeOld)/10
+		gyroRead = 0
 	
-	print((gyro[2] - gyroCal[2])/125.0)
+	#print((gyro[2] - gyroCal[2]))
 	print(cummulativeAngle)
 	print("")
 	#time.sleep(0.01)
