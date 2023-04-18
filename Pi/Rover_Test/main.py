@@ -41,7 +41,8 @@ window = pygame.display.set_mode((300, 300))
 #vel = 5
 
 ##### Motors
-motorSpeed = 0.8
+rightMotorSpeed = 0.6
+leftMotorSpeed = 0.6
 rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
 
@@ -141,6 +142,8 @@ accCal = IMU_Acc_Cal();
 print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
 print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 
+move = 0
+
 run = True
 while run:
     for event in pygame.event.get():
@@ -154,63 +157,76 @@ while run:
         break
     elif keys[pygame.K_UP]:
         print("up")
-        leftMotor.forward(motorSpeed)
-        rightMotor.forward(motorSpeed)
+        move = 1
+        leftMotor.forward(leftMotorSpeed)
+        rightMotor.forward(rightMotorSpeed)
     elif keys[pygame.K_DOWN]:
         print("down")
-        leftMotor.backward(motorSpeed)
-        rightMotor.backward(motorSpeed)
+        leftMotor.backward(leftMotorSpeed)
+        rightMotor.backward(rightMotorSpeed)
     elif keys[pygame.K_RIGHT]:
         print("right")
-        leftMotor.forward(motorSpeed)
-        rightMotor.backward(motorSpeed)
+        cummulativeAngle = 0
+        leftMotor.forward(leftMotorSpeed)
+        rightMotor.backward(rightMotorSpeed)
     elif keys[pygame.K_LEFT]:
         print("left")
-        leftMotor.backward(motorSpeed)
-        rightMotor.forward(motorSpeed)
+        cummulativeAngle = 0
+        leftMotor.backward(leftMotorSpeed)
+        rightMotor.forward(rightMotorSpeed)
     elif keys[pygame.K_s]:
         print("stop") 
         leftMotor.stop() 
         rightMotor.stop()  
-    elif keys[pygame.K_i]:
-        motorSpeed += 0.1
-        if motorSpeed > 1:
-            motorSpeed = 1
-        print(motorSpeed)
-    elif keys[pygame.K_u]:
-        motorSpeed -= 0.1
-        if motorSpeed < 0.5:
-            motorSpeed = 0.5
-        print(motorSpeed)
     elif keys[pygame.K_q]:
-        leftServo.value = -1
+        leftServo.value = -0.5
+        rightServo.value = -0.5
     elif keys[pygame.K_w]:
         leftServo.value = 0
-    elif keys[pygame.K_e]:
-        leftServo.value = 1
-    elif keys[pygame.K_r]:
-        rightServo.value = 1
-    elif keys[pygame.K_t]:
         rightServo.value = 0
-    elif keys[pygame.K_y]:
-        rightServo.value = -1
-    if gyroRead:
-        cummulativeAngle += ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
-        gyroRead = 0
-        print(cummulativeAngle)
-    if accRead:
+    elif keys[pygame.K_e]:
+        leftServo.value = 0.1
+        rightServo.value = 0.1
+    elif keys[pygame.K_r]:
+        cummulativeAngle = 0
+        leftMotorSpeed = 0.6
+        rightMotorSpeed = 0.6
+    if gyroRead or accRead and ~keys[pygame.K_LEFT] and ~keys[pygame.K_RIGHT]:
+        gyroYaw = ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
         temp = round(math.floor(-(acc[1]-accCal[1])*100)/100.0,1)
         temp2 = round(math.floor((acc[0]-accCal[0])*100)/100.0,1)
         if temp == 0 or temp2 == 0:
-            yawAcc = 0
+            accYaw = 0
         else:
-            yawAcc = 180 * math.atan2(temp, temp2) / math.pi
+            accYaw = 180 * math.atan2(temp, temp2) / math.pi
+        cummulativeAngle = (cummulativeAngle + gyroYaw)*1 + accYaw*0
+        gyroRead = 0
         accRead = 0
-        print("%0.02f" % temp)
-        print("%0.02f" % temp2)
-        #print("%0.03f" % round(math.atan2(temp2, temp),3))
-        print(yawAcc)
-        print("")
+        print(cummulativeAngle)
+        
+        if cummulativeAngle < -1:
+           rightMotorSpeed += 0.001
+           leftMotorSpeed -= 0.001
+        elif cummulativeAngle > 1:
+            leftMotorSpeed += 0.001
+            rightMotorSpeed -= 0.001
+        if rightMotorSpeed > 1:
+            rightMotorSpeed = 1
+        if rightMotorSpeed < 0.6:
+            rightMotorSpeed = 0.6
+        if leftMotorSpeed > 1:
+            leftMotorSpeed = 1
+        if leftMotorSpeed < 0.6:
+            leftMotorSpeed = 0.6
+        print(leftMotorSpeed)
+        print(rightMotorSpeed)
+        if move == 1:
+            leftMotor.forward(leftMotorSpeed)
+            rightMotor.forward(rightMotorSpeed)
+            move = 0
+        
+    
+    
     
     #print("")
 
