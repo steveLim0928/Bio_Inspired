@@ -1,13 +1,13 @@
 
 from threading import Thread
-from tello_controller import TelloController
-from Video_Controller import RoverController
+#from tello_controller import TelloController
+#from Video_Controller import RoverController
 
 from tello_commands import run_drone
 
 
 # Define the IP address and port for the video stream
-VIDEO_HOST = 'raspberry-pi-ip-address'
+'''VIDEO_HOST = 'raspberry-pi-ip-address'
 VIDEO_PORT = 8000
 
 # Define the IP address and port for the rover controller
@@ -27,7 +27,9 @@ rover_thread.start()
 
 # Wait for both threads to finish
 video_thread.join()
-rover_thread.join()
+rover_thread.join()'''
 
-
-movements = run_drone
+try:
+    movements = run_drone()
+except KeyboardInterrupt():
+    tello.land()

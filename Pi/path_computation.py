@@ -6,76 +6,132 @@ import cv2
 # Load image
 import cv2.aruco as aruco
 
+def get_pixels_inside_corners(corners):
+    """
+    Given a list of four tuples representing pixel coordinates of the four corners of a rectangle,
+    return a list of all pixel coordinates inside that rectangle.
+    """
+    # Get the minimum and maximum x and y coordinates of the 
+    pixels = []
 
+    if len(corners) == 0:
+        print("Empty")
+    else:
+        min_x = int(min([corner[0] for corner in corners]))
+        max_x = int(max([corner[0] for corner in corners]))
+        min_y = int(min([corner[1] for corner in corners]))
+        max_y = int(max([corner[1] for corner in corners]))
 
-#Computes real world distance of given pixels
+        # Create a list of all pixel coordinates inside the rectangle
+        for x in range(min_x, max_x+1):
+            for y in range(min_y, max_y+1):
+                pixels.append((x, y))
+
+    return pixels
+
 def compute_distance(pixel_x, pixel_y, camera_matrix, dist_coeffs, z):
+    # Define the image coordinates
+    img_coords = np.array([[[pixel_x, pixel_y]]], dtype=np.float32)
 
-    # Define the world coordinates
-    world_coords = np.array([[pixel_x, pixel_y]], dtype=np.float32)
+    # Undistort the image coordinates
+    undistorted_coords = cv2.undistortPoints(img_coords, camera_matrix, dist_coeffs)
 
-    # Undistort the image coordinates   
-    undistorted_coords = cv2.undistortPoints(world_coords, camera_matrix, dist_coeffs)
+    # Convert the undistorted image coordinates to normalized image coordinates
+    normalized_coords = undistorted_coords[0][0]
 
-    #undistorted_coords = undistorted_coords.reshape((2, 1))
-    undistorted_coords = undistorted_coords.reshape((2, 1))
-    undistorted_coords = undistorted_coords.T
-    undistorted_coords = np.append(undistorted_coords, [[1]], axis=1)
+    # Calculate the real-world x and y coordinates in the camera coordinate system
+    x = normalized_coords[0] * z
+    y = normalized_coords[1] * z
 
-    # Calculate the perspective transformation matrix
-    perspective_matrix = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=np.float32)
-    perspective_matrix[2][2] = 1.0 / z
-    print(perspective_matrix)
-
-    # Apply the perspective transformation matrix to the undistorted coordinates
-    transformed_coords = np.dot(perspective_matrix, undistorted_coords.T)
-    x = transformed_coords[0][0]  * z
-    y = transformed_coords[1][0]  * z
-
-
-    return x,y
-
+    return x, y
 
 # assigns rover, wall or destination or neither to blocks of the segmented grid of the picture
 def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_marker_ID, camera_matrix, distortion_coefficients):
     
-    # Load the image
-    image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    img = cv2.imread(img_path)
 
-    # Define the aruco dictionary and parameters
+    # Define the ArUco dictionary
+    marker_size = 80 
+
+
+
+    # Modify the parameters to make detection more lenient
+    '''parameters.adaptiveThreshConstant = 7
+    parameters.polygonalApproxAccuracyRate = 0.05
+    parameters.minMarkerPerimeterRate = 0.01
+    parameters.maxMarkerPerimeterRate = 0.5
+    parameters.minCornerDistanceRate = 0.05
+
+    parameters.errorCorrectionRate = 0.5
+    '''
+    #set cv2 detection parameters
+    parameters = cv2.aruco.DetectorParameters()
+    parameters.adaptiveThreshWinSizeMin = 3
+    parameters.adaptiveThreshWinSizeMax = 500
+    parameters.adaptiveThreshConstant = 100
+    parameters.polygonalApproxAccuracyRate = 0.1
+    parameters.maxMarkerPerimeterRate = 4
+    parameters.minMarkerDistanceRate = 0.05
+    parameters.minOtsuStdDev =  1
+    parameters.perspectiveRemovePixelPerCell = 1
+
+
+    parameters.minMarkerPerimeterRate = 0.01   # Decrease the minimum perimeter rate
+    parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_NONE   # Skip corner refinement
+    parameters.polygonalApproxAccuracyRate = 0.01   # Decrease the polygonal approximation accuracy rate
+
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
-    aruco_params = cv2.aruco.DetectorParameters()
+    
+    #image distortion
+    gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray_frame = cv2.GaussianBlur(gray_frame, (3, 3), 0)
+    gray_frame = cv2.adaptiveThreshold(gray_frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 71, 0.5)
 
-    # Detect the aruco markers in the image
-    corners, ids, rejected = cv2.aruco.detectMarkers(gray,aruco_dict, camera_matrix, distortion_coefficients)
+    cv2.imshow("Pre-processed Image", gray_frame)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
+    # Detect the ArUco markers in the input image
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray_frame, aruco_dict, camera_matrix, dist_coeffs, parameters = parameters)   
+    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix, dist_coeffs)
+
+
+    print("IDs found: ", ids)   
+
+    wall_corners = []
     # Get the corners of the rover, wall, and destination markers
     if rover_marker_ID in ids:
-        print("Corners: ", corners)
         rover_corners = corners[np.where(ids == rover_marker_ID)[0][0]]
     else:
         print("Rover marker ID not found")
         rover_corners = []
 
     if wall_marker_ID in ids:
-        wall_corners = corners[np.where(ids == int(wall_marker_ID))[0][0]]
+        for id in (np.where(ids == int(wall_marker_ID))[0]):
+           wall_corners.append(corners[id][0])
+
+
     else:
         print("wall marker ID not found")
         wall_corners = []
- 
+
     if destination_marker_ID in ids:
         destination_corners = corners[np.where(ids == int(destination_marker_ID))[0][0]]
     else:
         print("wall marker ID not found")
         destination_corners = []
-    
 
     # Convert the corners to pixel coordinates
-    wall_pixels = [np.int32(corner.squeeze()) for corner in wall_corners]
-    rover_pixels = [np.int32(corner.squeeze()) for corner in rover_corners]
-    destination_pixels = [np.int32(corner.squeeze()) for corner in destination_corners]
 
+    
+    wall_pixels = []
+    for x in range(len(wall_corners)):
+        wall_pixels += get_pixels_inside_corners(wall_corners[x])
+
+
+
+    rover_pixels = get_pixels_inside_corners(rover_corners[0])
+    destination_pixels = get_pixels_inside_corners(destination_corners[0])
     # Return the pixel coordinates for each marker type
     return wall_pixels, rover_pixels, destination_pixels    
 
@@ -112,27 +168,30 @@ def compress_image(image, image_path, n, rover_marker_ID, wall_marker_ID, destin
             rover_pixels_counter = 0
             destination_pixels_counter = 0
             
+                
+
             # For each pixel in the block:
             for y in range(j*block_height,(j+1)*block_height):
                 for x in range(i*block_width, (i+1)*block_width):
-                    
+                    #if j == 4 and i == 3:
+                       # print(pixel)
                     pixel = (x, y)
 
                     # counts number of rover pixels
-                    if pixel in map(tuple, rover_pixels[0]):
+                    if pixel in rover_pixels:
                         rover_pixels_counter += 1
 
                     # counts number of destination pixels
-                    elif pixel in map(tuple, destination_pixels[0]):
+                    elif pixel in destination_pixels:
                         destination_pixels_counter += 1
 
                     # if wall pixel, block is avoided
                     elif len(wall_pixels) > 0:
-                        if pixel in map(tuple, wall_pixels[0]):
+                        if pixel in wall_pixels:
                             walls.append((j, i))
                             break_out_flag = True
                             break
-                
+                            
                 # breaks when wall is detected
                 if break_out_flag:
                     break_out_flag = False
@@ -191,7 +250,7 @@ def astar(array, start, dest):
             return path
 
         # check the neighbors of the current cell
-        for next in [(0, 1), (0, -1), (1, 0), (-1, 0), (-1,-1), (1, 1)]:
+        for next in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
             neighbor = (curr[0] + next[0], curr[1] + next[1])
             # check if the neighbor is inside the array bounds
             if neighbor[0] < 0 or neighbor[0] >= array.shape[0] or neighbor[1] < 0 or neighbor[1] >= array.shape[1]:
@@ -214,7 +273,7 @@ def astar(array, start, dest):
 
 
 # finds real world distance of series of movements from rover to destination avoiding walls
-def find_path(image_path, height, r_ID, d_ID, w_ID, camera_matrix, dist_coefficients,compress_factor=20):
+def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coefficients,compress_factor=20):
 
     # open image 
     image = Image.open(image_path)
@@ -227,8 +286,9 @@ def find_path(image_path, height, r_ID, d_ID, w_ID, camera_matrix, dist_coeffici
     destination = None
 
     # compress image
-    compressed_image, start, dest = compress_image(image, image_path, compress_factor, r_ID, d_ID, w_ID, camera_matrix, dist_coefficients)
+    compressed_image, start, dest = compress_image(image, image_path, compress_factor, r_ID, w_ID, d_ID, camera_matrix, dist_coefficients)
     
+    print(compressed_image)
     # find path  
     path = astar(compressed_image, start, dest)
 
@@ -262,3 +322,122 @@ def find_path(image_path, height, r_ID, d_ID, w_ID, camera_matrix, dist_coeffici
 
     return path_distances
 
+
+
+def get_aruco_distance(img_path, camera_matrix, dist_coeffs):
+    
+    img = cv2.imread(img_path)
+
+    # Define the ArUco dictionary
+    marker_size = 80 
+
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
+    
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #img_blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
+
+    _, gray_frame = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY)
+
+    #gray_frame = cv2.adaptiveThreshold(img_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+
+    #cv2.imshow("Pre-processed Image", gray_frame)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    # Detect the ArUco markers in the input image
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray_frame, aruco_dict, camera_matrix, dist_coeffs)   
+    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix, dist_coeffs)
+
+
+
+    print(np.shape(rejectedImgPoints))
+    print("IDs found: ", ids)
+    for marker in range(len(ids)):
+
+        # Convert the rotation vector to a rotation matrix
+        
+   
+        rvec_marker = rvec[marker][0]
+        tvec_marker = tvec[marker][0]
+        
+        R, _ = cv2.Rodrigues(rvec_marker)
+
+        # Convert the marker position from camera coordinates to world coordinates
+    
+
+        marker_pos_camera = np.array([0, 0, 0], dtype=np.float32)
+
+        #marker_pos_camera = np.reshape(marker_pos_camera, (1, 3))
+
+        marker_pos_world = np.linalg.inv(R) @ tvec_marker.reshape((3,1)) - np.linalg.inv(R) @ marker_pos_camera.reshape((3,1))
+
+
+
+
+
+        # Print the position of the marker in world coordinates
+        print('Marker position (x, y, z):', marker_pos_world)
+
+
+
+
+print("START")
+img_path = "bottom_camera.jpg"
+
+fx = 433.44868
+fy = 939.895
+cx = 107
+cy = 318.9
+
+dist_coeffs = np.array([0.8333, 0.699, 0.455, 0.00159, -0.94509282], dtype=np.float32)
+
+
+
+fx = 130
+cx = 160.7
+fy = 131.9
+cy = 106
+
+dist_coeffs = np.array([ 0.53889391, -0.85682489, -0.01124153,  0.01029454,  0.41007014])
+
+
+fx = 160
+cx = 161
+fy = 159
+cy = 105.656
+
+dist_coeffs = np.array([ 0.02252689, -0.32137224, -0.00607589, -0.00284081,  0.19866972])
+
+
+
+
+fx = 141.15
+cx = 163.55
+fy = 141.5
+cy = 107.034
+
+dist_coeffs = np.array([ 0.32329846, -0.57971221,  0.00214554,  0.0186935 ,  0.27343211])
+
+
+
+fx = 135.805
+cx = 157.0827
+fy = 151.654
+cy = 124.869
+
+dist_coeffs = np.array([ 0.38930746, -0.62153127,  0.01333144  ,0.02126241 , 0.27916012])
+
+
+camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+
+#distance = compute_distance(159, 61, camera_matrix, dist_coeffs, 628)
+
+#print("distance 1: ", distance)
+
+
+#distance = compute_distance(201, 114, camera_matrix, dist_coeffs, 628)
+
+#print("distance 2: ", distance)
+
+#get_aruco_distance(img_path, camera_matrix, dist_coeffs)
+find_path(img_path, 600, 0, 1, 2, camera_matrix, dist_coeffs,compress_factor=30)
