@@ -1,7 +1,7 @@
 from smbus import SMBus
-import time
+import datetime, threading, time
 import math
-from gpiozero import Button, Servo, Motor
+from gpiozero import Button, Servo, Motor, RotaryEncoder
 from gpiozero.pins.pigpio import PiGPIOFactory
 import numpy as np
 import LSM6DSO
@@ -24,6 +24,9 @@ accRead = 0
 cummulativeAngle = 0.0
 yawAcc = 0.0
 
+prevDistDiff = 0
+sumDistDiff = 0
+
 gyroTimeNew = 0.0
 gyroTimeOld = 0.0
 
@@ -41,10 +44,14 @@ window = pygame.display.set_mode((300, 300))
 #vel = 5
 
 ##### Motors
-rightMotorSpeed = 0.6
-leftMotorSpeed = 0.6
+rightMotorSpeed = 0.7
+leftMotorSpeed = 0.7
 rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
+
+ppr = 341
+rightEncoder = RotaryEncoder (10, 9, max_steps = 0)
+leftEncoder = RotaryEncoder (27, 22, max_steps = 0)
 
 ##### Charging Plates
 
@@ -80,7 +87,7 @@ def IMU_Gyro_Cal():
 	global gyroRead, gyro
 	gyroCal = []
 	i = 0
-	while i < 300:
+	while i < 100:
 		if gyroRead:
 			gyroCal.append(gyro)
 			gyroRead = 0
@@ -101,7 +108,7 @@ def IMU_Acc_Cal():
 	global accRead, acc
 	AccCal = []
 	i = 0
-	while i < 300:
+	while i < 100:
 		if accRead:
 			AccCal.append(acc)
 			accRead = 0
@@ -120,6 +127,26 @@ def IMU_Acc_Cal():
 	
 INT1.when_pressed = LSM6DSO_readAcc
 INT2.when_pressed = LSM6DSO_readGyro
+
+yawKp = 0.00004
+yawKd = 0.00002
+yawKi = 0.000015
+
+# ENCODER UPDATES
+def speedCalibrate():
+    global leftMotorSpeed, rightMotorSpeed, prevDistDiff, sumDistDiff
+    # +ve = CCW rotation
+    distDiff = rightEncoder.steps + leftEncoder.steps
+    rightMotorSpeed -= (yawKp*distDiff + yawKd*prevDistDiff + yawKi*sumDistDiff)
+    leftMotorSpeed += (yawKp*distDiff + yawKd*prevDistDiff + yawKi*sumDistDiff)
+    prevDistDiff = distDiff
+    sumDistDiff += distDiff
+    print(rightEncoder.steps)
+    print(leftEncoder.steps)
+    #print(distDiff)
+    rightMotorSpeed = max(min(0.85, rightMotorSpeed), 0.65)
+    leftMotorSpeed = max(min(0.85, leftMotorSpeed), 0.65)
+        
 	
 ####################### MAIN ####################### 	
 	
@@ -144,8 +171,16 @@ print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 
 move = 0
 
-run = True
-while run:
+#timerThread = threading.Thread(target=speedCalibrate)
+#timerThread.daemon = True
+#timerThread.start()
+
+prevTime = 0
+currTime = 0
+
+
+while True:
+    currTime = time.time()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
@@ -154,6 +189,7 @@ while run:
     keys = pygame.key.get_pressed()   
 	#char = screen.getch()
     if keys[pygame.K_p]:
+        print("stop")
         break
     elif keys[pygame.K_UP]:
         print("up")
@@ -175,9 +211,9 @@ while run:
         leftMotor.backward(leftMotorSpeed)
         rightMotor.forward(rightMotorSpeed)
     elif keys[pygame.K_s]:
-        print("stop") 
         leftMotor.stop() 
-        rightMotor.stop()  
+        rightMotor.stop() 
+        move = 0 
     elif keys[pygame.K_q]:
         leftServo.value = -0.5
         rightServo.value = -0.5
@@ -202,35 +238,40 @@ while run:
         cummulativeAngle = (cummulativeAngle + gyroYaw)*1 + accYaw*0
         gyroRead = 0
         accRead = 0
-        print(cummulativeAngle)
         
-        if cummulativeAngle < -1:
-           rightMotorSpeed += 0.001
-           leftMotorSpeed -= 0.001
-        elif cummulativeAngle > 1:
-            leftMotorSpeed += 0.001
-            rightMotorSpeed -= 0.001
-        if rightMotorSpeed > 1:
-            rightMotorSpeed = 1
-        if rightMotorSpeed < 0.6:
-            rightMotorSpeed = 0.6
-        if leftMotorSpeed > 1:
-            leftMotorSpeed = 1
-        if leftMotorSpeed < 0.6:
-            leftMotorSpeed = 0.6
-        print(leftMotorSpeed)
-        print(rightMotorSpeed)
-        if move == 1:
+        # ~ if cummulativeAngle < -1:
+           # ~ rightMotorSpeed += 0.001
+           # ~ leftMotorSpeed -= 0.001
+        # ~ elif cummulativeAngle > 1:
+            # ~ leftMotorSpeed += 0.001
+            # ~ rightMotorSpeed -= 0.001
+        # ~ if rightMotorSpeed > 1:
+            # ~ rightMotorSpeed = 1
+        # ~ if rightMotorSpeed < 0.6:
+            # ~ rightMotorSpeed = 0.6
+        # ~ if leftMotorSpeed > 1:
+            # ~ leftMotorSpeed = 1
+        # ~ if leftMotorSpeed < 0.6:
+            # ~ leftMotorSpeed = 0.6
+        # ~ print(leftMotorSpeed)
+        # ~ print(rightMotorSpeed)
+
+            
+    if move == 1:
+        if (currTime-prevTime) >= 0.01:
+            print("%0.04f"%(currTime-prevTime))
+            prevTime = currTime
+            speedCalibrate()
             leftMotor.forward(leftMotorSpeed)
             rightMotor.forward(rightMotorSpeed)
-            move = 0
+            print("left = % .02f" % leftMotorSpeed)
+            print("right = % .02f" % rightMotorSpeed)
         
     
-    
-    
+    print("%0.04f" % (rightEncoder.steps + leftEncoder.steps))
+   
     #print("")
 
-		
 print("Closed")
 #Close down curses properly, inc turn echo back on!
     
