@@ -6,6 +6,7 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 import numpy as np
 import LSM6DSO
 import pygame
+from multiprocessing import Queue
 
 ####################### SETUP ####################### 
 
@@ -31,17 +32,8 @@ gyroTimeNew = 0.0
 gyroTimeOld = 0.0
 
 ##### Keyboard Input
-#screen = curses.initscr()
-#curses.noecho() 
-#curses.cbreak()
-#screen.keypad(True)
 pygame.init()
 window = pygame.display.set_mode((300, 300))
-#clock = pygame.time.Clock()
-
-#rect = pygame.Rect(0, 0, 20, 20)
-#rect.center = window.get_rect().center
-#vel = 5
 
 ##### Motors
 rightMotorSpeed = 0.7
@@ -49,9 +41,18 @@ leftMotorSpeed = 0.7
 rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
 
+rightEncoderVal = 0
+leftEncoderVal = 0
+
+prevRightStep = 0
+prevLeftStep = 0
+rightSpeedCount = 0
+rightSpeedSteps = 0
+prevSpeedTime = 0
+
 ppr = 341
-rightEncoder = RotaryEncoder (10, 9, max_steps = 0)
-leftEncoder = RotaryEncoder (27, 22, max_steps = 0)
+rightEncoder = RotaryEncoder (10, 9, max_steps = 0, pin_factory = factory)
+leftEncoder = RotaryEncoder (22, 27, max_steps = 0, pin_factory = factory)
 
 ##### Charging Plates
 
@@ -128,46 +129,63 @@ def IMU_Acc_Cal():
 INT1.when_pressed = LSM6DSO_readAcc
 INT2.when_pressed = LSM6DSO_readGyro
 
-yawKp = 0.00004
-yawKd = 0.00002
-yawKi = 0.000015
+yawKp = 0.000025
+yawKd = 0.00001
+yawKi = -0.0000000
 
 # ENCODER UPDATES
+
+rightEncoderBuf = 0
+leftEncoderBuf = 0
+
 def speedCalibrate():
-    global leftMotorSpeed, rightMotorSpeed, prevDistDiff, sumDistDiff
+    global move, rightEncoderBuf, leftEncoderBuf, leftMotorSpeed, rightMotorSpeed, prevDistDiff, sumDistDiff, rightEncoderVal, leftEncoderVal, prevRightStep, prevLeftStep
     # +ve = CCW rotation
-    distDiff = rightEncoder.steps + leftEncoder.steps
-    rightMotorSpeed -= (yawKp*distDiff + yawKd*prevDistDiff + yawKi*sumDistDiff)
-    leftMotorSpeed += (yawKp*distDiff + yawKd*prevDistDiff + yawKi*sumDistDiff)
-    prevDistDiff = distDiff
-    sumDistDiff += distDiff
-    print(rightEncoder.steps)
-    print(leftEncoder.steps)
+    if move:
+        rightEncoderVal = rightEncoder.steps - rightEncoderBuf
+        leftEncoderVal = leftEncoder.steps - leftEncoderBuf
+        distDiff = rightEncoderVal - leftEncoderVal
+        print("Correction: %0.04f, %0.04f, %0.04f" %(distDiff, (distDiff-prevDistDiff), sumDistDiff))
+        print("Corrected: %0.04f, %0.04f, %0.04f" %(yawKp*distDiff, yawKd*(distDiff-prevDistDiff), yawKi*sumDistDiff))
+        rightMotorSpeed -= (yawKp*distDiff + yawKd*(distDiff-prevDistDiff) + yawKi*sumDistDiff)
+        leftMotorSpeed += (yawKp*distDiff + yawKd*(distDiff-prevDistDiff) + yawKi*sumDistDiff)
+        prevDistDiff = distDiff
+        sumDistDiff += distDiff
+        if sumDistDiff > 100:
+            sumDistDiff = 100
+        elif sumDistDiff < -100:
+            sumDistDiff = -100
+    else:
+        rightEncoderBuf = rightEncoder.steps
+        leftEncoderBuf = leftEncoder.steps
+    #print("%.4f, %.4f" % (rightEncoderVal, leftEncoderVal))
+    #print(rightEncoder.steps)
+    #print(leftEncoder.steps)
     #print(distDiff)
-    rightMotorSpeed = max(min(0.85, rightMotorSpeed), 0.65)
-    leftMotorSpeed = max(min(0.85, leftMotorSpeed), 0.65)
-        
+    rightMotorSpeed = max(min(0.75, rightMotorSpeed), 0.58)
+    leftMotorSpeed = max(min(0.75, leftMotorSpeed), 0.58)
+     
 	
 ####################### MAIN ####################### 	
 	
 # SETUP
-error = LSM6DSO.begin(LSM6DSOAddr, i2cbus)
-if (~error):
-	print("IMU Found")
-else:
-	print("IMU Not Found")
+#error = LSM6DSO.begin(LSM6DSOAddr, i2cbus)
+#if (~error):
+#	print("IMU Found")
+#else:
+#	print("IMU Not Found")
 
-LSM6DSO.intialise(LSM6DSOAddr, i2cbus)
-print("IMU initialised")
+#LSM6DSO.intialise(LSM6DSOAddr, i2cbus)
+#print("IMU initialised")
 
 ##### IMU end
 
-print("Calibrate Gyro")
-time.sleep(5)
-gyroCal = IMU_Gyro_Cal();
-accCal = IMU_Acc_Cal();
-print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
-print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
+#print("Calibrate Gyro")
+#time.sleep(5)
+#gyroCal = IMU_Gyro_Cal();
+#accCal = IMU_Acc_Cal();
+#print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
+#print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 
 move = 0
 
@@ -192,7 +210,7 @@ while True:
         print("stop")
         break
     elif keys[pygame.K_UP]:
-        print("up")
+        #print("up")
         move = 1
         leftMotor.forward(leftMotorSpeed)
         rightMotor.forward(rightMotorSpeed)
@@ -225,8 +243,9 @@ while True:
         rightServo.value = 0.1
     elif keys[pygame.K_r]:
         cummulativeAngle = 0
-        leftMotorSpeed = 0.6
-        rightMotorSpeed = 0.6
+        leftMotorSpeed = 0.75
+        rightMotorSpeed = 0.75
+    '''
     if gyroRead or accRead and ~keys[pygame.K_LEFT] and ~keys[pygame.K_RIGHT]:
         gyroYaw = ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
         temp = round(math.floor(-(acc[1]-accCal[1])*100)/100.0,1)
@@ -256,23 +275,39 @@ while True:
         # ~ print(leftMotorSpeed)
         # ~ print(rightMotorSpeed)
 
+      '''
+    if (currTime-prevTime) >= 0.01:
+        #print("%0.04f"%(currTime-prevTime))
+        print("")
+        if rightSpeedCount == 10:
             
-    if move == 1:
-        if (currTime-prevTime) >= 0.01:
-            print("%0.04f"%(currTime-prevTime))
-            prevTime = currTime
-            speedCalibrate()
+            print("Right Speed: %.04f, %0.04f" % ((rightSpeedSteps - prevRightStep), ((rightSpeedSteps - prevRightStep)/(ppr*(currTime-prevSpeedTime)))))
+            prevRightStep = rightSpeedSteps
+            prevLeftStep = leftEncoderVal
+            rightSpeedSteps = 0
+            prevSpeedTime = currTime
+            rightSpeedCount = 0
+        rightSpeedCount += 1
+        prevTime = currTime
+        speedCalibrate()
+        rightSpeedSteps += rightEncoderVal
+        if move:
             leftMotor.forward(leftMotorSpeed)
             rightMotor.forward(rightMotorSpeed)
-            print("left = % .02f" % leftMotorSpeed)
-            print("right = % .02f" % rightMotorSpeed)
-        
+        print("left = % .02f, right = % .02f" % (leftMotorSpeed, rightMotorSpeed))
+        print("%0.04f" % (rightEncoderVal - leftEncoderVal))
+            #print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
+            #print("%0.04f" % (rightEncoder.steps))
+            
+    #print("%0.04f" % (rightEncoder.steps))
+    #print("%0.04f" % (rightEncoderVal))
     
-    print("%0.04f" % (rightEncoder.steps + leftEncoder.steps))
+    
    
     #print("")
 
 print("Closed")
+
 #Close down curses properly, inc turn echo back on!
     
 
