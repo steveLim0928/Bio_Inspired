@@ -36,25 +36,28 @@ pygame.init()
 window = pygame.display.set_mode((300, 300))
 
 ##### Motors
-rightMotorSpeed = 0.61
-leftMotorSpeed = 0.59
+rightMotorSpeed = 0.65
+leftMotorSpeed = 0.65
 rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
 
+# Encoder Current Value
 rightEncoderVal = 0
 leftEncoderVal = 0
 
+# Previous Encoder Value
 prevRightStep = 0
 prevLeftStep = 0
-rightSpeedCount = 0
-rightSpeedSteps = 0
-leftSpeedSteps = 0
-prevSpeedTime = 0
 
-prevRightDiffSpeed = 0
-prevLeftDiffSpeed = 0
-prevRightSumSpeed = 0
-prevLeftSumSpeed = 0
+# Encoder PID
+prevRightStepError = 0
+sumRightStepError = 0
+prevLeftStepError = 0
+sumLeftStepError = 0
+
+rightEncoderBuf = 0
+leftEncoderBuf = 0
+
 
 dist = 0
 
@@ -137,14 +140,10 @@ def IMU_Acc_Cal():
 INT1.when_pressed = LSM6DSO_readAcc
 INT2.when_pressed = LSM6DSO_readGyro
 
-yawKp = 0.00001
-yawKd = 0.000005
-yawKi = 0.000001
 
 # ENCODER UPDATES
 
-rightEncoderBuf = 0
-leftEncoderBuf = 0
+
 
 def getEncoder():
     global move, rightEncoderBuf, leftEncoderBuf, rightEncoderVal, leftEncoderVal
@@ -155,30 +154,21 @@ def getEncoder():
         rightEncoderBuf = rightEncoder.steps
         leftEncoderBuf = leftEncoder.steps
 
-def stepCalibrate(rightSpeed, leftSpeed, presetSpeed):
-    global move, rightEncoderBuf, leftEncoderBuf, leftMotorSpeed, rightMotorSpeed, prevDistDiff, sumDistDiff, rightEncoderVal, leftEncoderVal, prevRightStep, prevLeftStep
+def stepCalibrate(Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumError):
     # +ve = CCW rotation
-    if move:
-        distDiff = rightEncoderVal - leftEncoderVal
-        #distDiff = max(min(150, distDiff), -150)
-        #print("Correction: %0.04f, %0.04f, %0.04f" %(distDiff, (distDiff-prevDistDiff), sumDistDiff))
-        print("Corrected: %0.04f, %0.04f, %0.04f" %(yawKp*distDiff, yawKd*(distDiff-prevDistDiff), yawKi*sumDistDiff))
-        if (rightSpeed >= 0.1 and leftSpeed >= 0.1):
-            rightMotorSpeed -= (yawKp*distDiff + yawKd*(distDiff-prevDistDiff) + yawKi*sumDistDiff)
-            leftMotorSpeed += (yawKp*distDiff + yawKd*(distDiff-prevDistDiff) + yawKi*sumDistDiff)
-            prevDistDiff = distDiff
-            sumDistDiff += distDiff
-            #sumDistDiff = max(min(200, sumDistDiff), -200)
-            sumDistDiff = sumDistDiff * 0.75
-    else:
-        rightEncoderBuf = rightEncoder.steps
-        leftEncoderBuf = leftEncoder.steps
-    print("%.4f, %.4f" % (rightEncoderVal, leftEncoderVal))
-    #print(rightEncoder.steps)
-    #print(leftEncoder.steps)
-    #print(distDiff)
+    diff = presetCount - (currCount - prevCount)
+    #print("Corrected: %0.04f, %0.04f, %0.04f" %(yawKp*distDiff, yawKd*(distDiff-prevDistDiff), yawKi*sumDistDiff))
+    correction = (Kp*diff + Kd*(diff-prevError) + Ki*sumError)
+    #print("Correction: %.4f, %.4f, %.4f" % (Kp*diff, Kd*(diff-prevError), Ki*sumError))
+    prevError = diff
+    sumError += diff
+    sumError = max(min(200, sumError), -200)
+    print("Step Size: %.4f, %.4f" % (diff, (currCount - prevCount)))
     
-     
+    
+    return correction, prevError, sumError
+    
+''' 
 def speedCal(speed, setPoint, Kp, Kd, Ki, prevDiff, sumDiff):
     global move
     if move:	
@@ -191,6 +181,7 @@ def speedCal(speed, setPoint, Kp, Kd, Ki, prevDiff, sumDiff):
 	    return correction, diff, sumDiff
     else:
         return 0, 0, 0
+'''
         
 def distTravel(dist, rightEncoderVal, leftEncoderVal, ppr):
     dist = (rightEncoderVal + leftEncoderVal)*251.33/(2*ppr)
@@ -228,7 +219,7 @@ currTime = 0
 
 complete = 0
 
-speedPreset = 2.5
+speedPreset = 49
 
 while True:
     currTime = time.time()
@@ -309,9 +300,10 @@ while True:
         # ~ print(rightMotorSpeed)
 
       '''
-    if (currTime-prevTime) >= 0.1:
-        #print("%0.04f"%(currTime-prevTime))
+    if (currTime-prevTime) >= 0.05:
         print("")
+        print("Time: %0.04f"%(currTime-prevTime))
+        
         '''
         if rightSpeedCount == 10 and move:
             rightSpeed = (rightSpeedSteps - prevRightStep)/(ppr*(currTime-prevSpeedTime))
@@ -339,7 +331,7 @@ while True:
             rightSpeedCount = 0
             '''
         
-        
+        '''
         if move:
             rightSpeedCount += 1
             if complete == 1:
@@ -347,20 +339,24 @@ while True:
                 rightMotorSpeed -=0.0
                 leftMotorSpeed -= 0.0	
                 complete = 2			
-        
+        '''
         
         getEncoder()
         #rightSpeedSteps += rightEncoderVal
         #leftSpeedSteps += leftEncoderVal
         
-        rightSpeed = (rightEncoderVal - prevRightStep)/(ppr*(currTime-prevTime))
-        leftSpeed = (leftEncoderVal - prevLeftStep)/(ppr*(currTime-prevTime))
-        stepCalibrate(rightSpeed, leftSpeed, speedPreset)
-        if rightSpeed >= speedPreset and complete == 0:
-            complete = 1
-        print("Right Speed: %.04f, %0.04f" % ((rightEncoderVal - prevRightStep), rightSpeed))
-        print("Left Speed: %.04f, %0.04f" % ((leftEncoderVal - prevLeftStep), leftSpeed))
+        #rightSpeed = (rightEncoderVal - prevRightStep)/(ppr*(currTime-prevTime))
+        #leftSpeed = (leftEncoderVal - prevLeftStep)/(ppr*(currTime-prevTime))
         
+        
+        
+        
+        #if rightSpeed >= speedPreset and complete == 0:
+            #complete = 1
+        #print("Right Speed: %.04f, %0.04f" % ((rightEncoderVal - prevRightStep), rightSpeed))
+        #print("Left Speed: %.04f, %0.04f" % ((leftEncoderVal - prevLeftStep), leftSpeed))
+        
+        '''
         if rightSpeed >= speedPreset*0.5 or leftSpeed >= speedPreset*0.5:    
             rightNewSpeed = speedCal(rightSpeed, speedPreset, 0.0001, 0.0000, 0.0000, prevRightDiffSpeed, prevRightSumSpeed)
             prevRightDiffSpeed = rightNewSpeed[1]
@@ -371,22 +367,41 @@ while True:
             prevLeftDiffSpeed = leftNewSpeed[1]
             prevLeftSumSpeed = leftNewSpeed[2]
             leftMotorSpeed += leftNewSpeed[0]
-        
+        '''
         
         #print(currTime-prevTime)
         
         prevTime = currTime
         
-        rightMotorSpeed = max(min(0.75, rightMotorSpeed), 0.55)
-        #print("%.6f" % rightMotorSpeed)
-        leftMotorSpeed = max(min(0.75, leftMotorSpeed), 0.55)
+        
         if move:
+            # Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumError
+            
+            if rightEncoderVal > (ppr):
+                rightCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, rightEncoderVal, prevRightStep, max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 33), prevRightStepError, sumRightStepError)
+                prevRightStepError = rightCorrection[1]
+                sumRightStepError = rightCorrection[2]
+                rightMotorSpeed += rightCorrection[0]
+                #print("Right Correction: %.04f" % rightCorrection[0])
+            
+            if leftEncoderVal >(ppr):
+                leftCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, leftEncoderVal, prevLeftStep, max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 33), prevLeftStepError, sumLeftStepError)
+                prevLeftStepError = leftCorrection[1]
+                sumLeftStepError = leftCorrection[2]
+                leftMotorSpeed += leftCorrection[0]
+            
+            print("Set Speed: %.4f, %.4f" % (max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 33), (max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 33))))
             dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
+            
+            rightMotorSpeed = max(min(0.75, rightMotorSpeed), 0.48)
+            #print("%.6f" % rightMotorSpeed)
+            leftMotorSpeed = max(min(0.75, leftMotorSpeed), 0.48)
+            
             leftMotor.forward(leftMotorSpeed)
             rightMotor.forward(rightMotorSpeed)
-            print("left = % .08f, right = % .08f" % (leftMotorSpeed, rightMotorSpeed))
+            print("Speed, left = % .08f, right = % .08f" % (leftMotorSpeed, rightMotorSpeed))
             print("%0.04f" % (rightEncoderVal - leftEncoderVal))
-            print("Distance Travelled: %.2f mm" % dist)
+            #print("Distance Travelled: %.2f mm" % dist)
         prevRightStep = rightEncoderVal
         prevLeftStep = leftEncoderVal
             #print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
