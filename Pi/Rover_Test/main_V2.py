@@ -36,8 +36,8 @@ pygame.init()
 window = pygame.display.set_mode((300, 300))
 
 ##### Motors
-rightMotorSpeed = 0.65
-leftMotorSpeed = 0.65
+rightMotorSpeed = 0.62
+leftMotorSpeed = 0.62
 rightMotor = Motor(26,19)
 leftMotor = Motor(21,20)
 
@@ -60,6 +60,7 @@ leftEncoderBuf = 0
 
 
 dist = 0
+distSetPoint = 2000
 
 ppr = 341
 rightEncoder = RotaryEncoder (10, 9, max_steps = 0, pin_factory = factory)
@@ -217,7 +218,7 @@ move = 0
 prevTime = 0
 currTime = 0
 
-complete = 0
+underSpeedCount = 0
 
 speedPreset = 49
 
@@ -373,24 +374,67 @@ while True:
         
         prevTime = currTime
         
+        if distSetPoint - dist > 50:
+            move = 1
+            if distSetPoint - dist < 250:
+                speedPreset = 33
+            if distSetPoint - dist < 150:
+                speedPreset = 15
+        else:
+            move = 0
+        
+        print(move)
         
         if move:
             # Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumError
             
-            if rightEncoderVal > (ppr):
-                rightCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, rightEncoderVal, prevRightStep, max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 33), prevRightStepError, sumRightStepError)
+            if (rightEncoderVal - prevRightStep > 0) and (leftEncoderVal - prevLeftStep > 0):
+                if (rightEncoderVal - prevRightStep > speedPreset*0.5) and (leftEncoderVal - prevLeftStep > speedPreset*0.5):
+                    rightCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, rightEncoderVal, prevRightStep, max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevRightStepError, sumRightStepError)
+                    prevRightStepError = rightCorrection[1]
+                    sumRightStepError = rightCorrection[2]
+                    rightMotorSpeed += rightCorrection[0]
+                
+                    leftCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, leftEncoderVal, prevLeftStep, max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevLeftStepError, sumLeftStepError)
+                    prevLeftStepError = leftCorrection[1]
+                    sumLeftStepError = leftCorrection[2]
+                    leftMotorSpeed += leftCorrection[0]
+                    
+                    underSpeedCount = 0
+                
+                underSpeedCount += 1
+                
+                if underSpeedCount >= 5:
+                    print ("Under Speed")
+                    rightCorrection = stepCalibrate(0.00005, 0, 0, rightEncoderVal, prevRightStep, max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevRightStepError, sumRightStepError)
+                    prevRightStepError = rightCorrection[1]
+                    sumRightStepError = rightCorrection[2]
+                    rightMotorSpeed += rightCorrection[0]
+                
+                    leftCorrection = stepCalibrate(0.00005, 0, 0, leftEncoderVal, prevLeftStep, max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevLeftStepError, sumLeftStepError)
+                    prevLeftStepError = leftCorrection[1]
+                    sumLeftStepError = leftCorrection[2]
+                    leftMotorSpeed += leftCorrection[0]
+                    
+                    #underSpeedCount = 0
+                
+            else:
+				
+                print("Unmoved")
+                rightCorrection = stepCalibrate(0.00005, 0, 0, rightEncoderVal, prevRightStep, max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevRightStepError, sumRightStepError)
                 prevRightStepError = rightCorrection[1]
                 sumRightStepError = rightCorrection[2]
                 rightMotorSpeed += rightCorrection[0]
-                #print("Right Correction: %.04f" % rightCorrection[0])
-            
-            if leftEncoderVal >(ppr):
-                leftCorrection = stepCalibrate(0.00003, 0.000003, 0.00001, leftEncoderVal, prevLeftStep, max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 33), prevLeftStepError, sumLeftStepError)
+                
+                leftCorrection = stepCalibrate(0.00005, 0, 0, leftEncoderVal, prevLeftStep, max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 15), prevLeftStepError, sumLeftStepError)
                 prevLeftStepError = leftCorrection[1]
                 sumLeftStepError = leftCorrection[2]
                 leftMotorSpeed += leftCorrection[0]
+                
+				
+                   
             
-            print("Set Speed: %.4f, %.4f" % (max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 33), (max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 33))))
+            print("Set Speed: %.4f, %.4f" % (max(min(99, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.05)), 15), (max(min(99, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.05)), 15))))
             dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
             
             rightMotorSpeed = max(min(0.75, rightMotorSpeed), 0.48)
@@ -401,7 +445,12 @@ while True:
             rightMotor.forward(rightMotorSpeed)
             print("Speed, left = % .08f, right = % .08f" % (leftMotorSpeed, rightMotorSpeed))
             print("%0.04f" % (rightEncoderVal - leftEncoderVal))
-            #print("Distance Travelled: %.2f mm" % dist)
+            print("Distance Travelled: %.2f mm" % dist)
+            
+        else:
+            leftMotor.stop() 
+            rightMotor.stop() 
+            
         prevRightStep = rightEncoderVal
         prevLeftStep = leftEncoderVal
             #print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
