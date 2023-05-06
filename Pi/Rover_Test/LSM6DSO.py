@@ -293,9 +293,9 @@ def intialise(address, i2cport):
 	count += setInterruptOne(address, i2cport)
 	count += setInterruptTwo(address, i2cport)
 	count += setAccRange(address, i2cport, 2);
-	count += setAccDataRate(address, i2cport, 52)
+	count += setAccDataRate(address, i2cport, 104)
 	count += setGyroRange(address, i2cport, 125);
-	count += setGyroDataRate(address, i2cport, 52)
+	count += setGyroDataRate(address, i2cport, 104)
 	print("%2f" % count)
 	
 def readAccX(address, i2cport):
