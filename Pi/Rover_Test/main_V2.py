@@ -213,6 +213,7 @@ print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 
 moveSeq = [0,0]
 rightSeq = [1,0]
+turnAngle = 0
 
 sequenceStep = 0
 
@@ -286,11 +287,11 @@ while True:
         
         if turn:  
             move = 0
-            if turnSetPoint + cummulativeAngle > 1:
+            if turnSetPoint - turnAngle > 10:
                 right = 1
                 left = 0
-            elif turnSetPoint + cummulativeAngle < -1:
-                left = 1
+            elif turnSetPoint - turnAngle < -10:
+                #left = 1
                 right = 0
             else:
                 print("Turn else")
@@ -346,7 +347,7 @@ while True:
         elif right:
             print("Turning Right")
             leftMotor.forward(leftMotorSpeed)
-            rightMotor.backward(rightMotorSpeed)
+            #rightMotor.backward(rightMotorSpeed)
         elif left:
             print("Turning Left")
             leftMotor.backward(leftMotorSpeed)
@@ -360,12 +361,12 @@ while True:
             
         prevRightStep = rightEncoderVal
         prevLeftStep = leftEncoderVal
-        turnAngle = ((abs(rightEncoderVal)*282.74/(ppr))/(1319.47))*360
+        turnAngle = (abs(leftEncoderVal)*80*math.pi/ppr)*(360/(math.pi*810))
         #print("Turn Angle: %.4f degree" % turnAngle)
         #print("Left Turn Angle: %.4f degree" % (((abs(leftEncoderVal)*282.74/(ppr))/(1319.47))*360))
         #print("Right: %.4f" % rightEncoderVal)
         #print("Left: %.4f" % leftEncoderVal)
-        #print("Encoder Yaw: %.4f" % ((abs(rightEncoderVal) - abs(leftEncoderVal))*math.pi*80/(ppr)))
+        print("Encoder Yaw: %.4f" % (turnAngle))
         print("Gyro Angle: %.4f deg" % cummulativeAngle)
         print("Prev Angle: %.4f deg" % prevAngle)
         dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
