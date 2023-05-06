@@ -208,9 +208,9 @@ class FrontEnd(object):
 
         z_dist=self.tello.get_height()
         
-        speedAlignX = 40
-        speedAlignY = 40
-        speedAlignZ = -40
+        speedAlignX = 10
+        speedAlignY = 10
+        speedAlignZ = -10
         if detected==1:
             self.detectCounter=0
             print("ids found",ids)
@@ -220,13 +220,13 @@ class FrontEnd(object):
             print("initiate align::::::::")
 
             if(abs(tvec[0])<100):
-                speedAlignX =20
+                speedAlignX =10
             
             if(abs(tvec[1])<100):
-                speedAlignY = 20
+                speedAlignY = 10
 
             if(abs(tvec[2])<600):
-                speedAlignZ = -20
+                speedAlignZ = -10
 
             if tvec[0]>error_margin:
                 command[0] = -speedAlignX
@@ -251,8 +251,8 @@ class FrontEnd(object):
                 self.left_right_velocity=0
             
             if tvec[2]>450:
-                command[2] = -30
-                self.up_down_velocity = -30
+                command[2] = -10
+                self.up_down_velocity = -10
             else:
                 aligned[2]= 1
                 command[2] = 0
