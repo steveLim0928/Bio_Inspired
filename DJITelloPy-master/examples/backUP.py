@@ -250,7 +250,7 @@ class FrontEnd(object):
                 command[1] = 0
                 self.left_right_velocity=0
             
-            if tvec[2]>450:
+            if tvec[2]>550:
                 command[2] = -10
                 self.up_down_velocity = -10
             else:
@@ -262,11 +262,11 @@ class FrontEnd(object):
             if (aligned[0] & aligned[1] & aligned[2]) == 1:
                 print("LLLLLLLLANANAD")
                 self.resetDroneCommands()
-                #time.sleep(1)
+                time.sleep(2)
                 #detected,tvec,ids=self.detectAruco()
                 cv2.putText(self.frame, "Land 1",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 #if (detected==1):
-                if (abs(tvec[0])<error_margin and abs(tvec[1])<error_margin) and (tvec[2]<500):
+                if (abs(tvec[0])<error_margin and abs(tvec[1])<error_margin) and (tvec[2]<550):
                     print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
                     cv2.putText(self.frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                     not self.tello.land()
