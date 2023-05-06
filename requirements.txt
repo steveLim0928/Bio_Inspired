@@ -1,5 +1,0 @@
-djitellopy==2.4.0
-numpy==1.21.1
-opencv-contrib-python==4.5.3.56
-opencv-python==4.5.3.56
-pygame==2.3.0
