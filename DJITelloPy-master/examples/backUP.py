@@ -262,7 +262,7 @@ class FrontEnd(object):
             if (aligned[0] & aligned[1] & aligned[2]) == 1:
                 print("LLLLLLLLANANAD")
                 self.resetDroneCommands()
-                time.sleep(2)
+                time.sleep(4)
                 #detected,tvec,ids=self.detectAruco()
                 cv2.putText(self.frame, "Land 1",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 #if (detected==1):

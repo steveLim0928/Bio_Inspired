@@ -170,6 +170,7 @@ def getEncoder():
         rightEncoderVal = rightEncoder.steps - rightEncoderBuf
         leftEncoderVal = leftEncoder.steps - leftEncoderBuf
     else:
+        print("Encoder Reset")
         rightEncoderBuf = rightEncoder.steps
         leftEncoderBuf = leftEncoder.steps
 
@@ -192,6 +193,7 @@ def distTravel(dist, rightEncoderVal, leftEncoderVal, ppr):
 	
 ####################### MAIN ####################### 	
 	
+'''
 # SETUP
 error = LSM6DSO.begin(LSM6DSOAddr, i2cbus)
 if (~error):
@@ -210,9 +212,11 @@ gyroCal = IMU_Gyro_Cal();
 accCal = IMU_Acc_Cal();
 print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
 print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
-
-moveSeq = [0,0]
-rightSeq = [1,0]
+'''
+moveSeq = [1,0,1,0,1]
+moveDist = [5000,0,3500,0,3000]
+rightSeq = [0,1,0,1,0]
+turnDist = [0,-90,0,90,0]
 turnAngle = 0
 
 sequenceStep = 0
@@ -223,45 +227,50 @@ while True:
     currTime = time.time()
     
     if moveSeq[sequenceStep]:
-        distSetPoint = 9000
+        distSetPoint = moveDist[sequenceStep]
         if speedSet == 0:
-            rightMotorSpeed = 0.62
-            leftMotorSpeed = 0.62
+            rightMotorSpeed = 0.64
+            leftMotorSpeed = 0.64
             speedSet = 1
 
     else:
         if rightSeq[sequenceStep]:
-            turnSetPoint = (90 + prevAngle)*0.85
+            turnSetPoint = (turnDist[sequenceStep] - prevAngle)*1.2
             turn = 1
             
             if speedSet == 0:
-                  rightMotorSpeed = 0.6
-                  leftMotorSpeed = 0.6
+                  rightMotorSpeed = 0.85
+                  leftMotorSpeed = 0.85
                   speedSet = 1
                   cummulativeAngle = 0
-    
+    '''
     if gyroRead:
         gyroYaw = ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
-        '''
+        
         temp = round(math.floor(-(acc[1]-accCal[1])*100)/100.0,1)
         temp2 = round(math.floor((acc[0]-accCal[0])*100)/100.0,1)
         if temp == 0 or temp2 == 0:
             accYaw = 0
         else:
             accYaw = 180 * math.atan2(temp, temp2) / math.pi
-            '''
+            
         cummulativeAngle = (cummulativeAngle + gyroYaw)*1 
         gyroRead = 0
         accRead = 0
+    '''
         
     if angleReset:
         print("Angle Reset")
-        prevAngle = cummulativeAngle
-        cummulativeAngle = 0
+        prevAngle = turnAngle
+        turnAngle = 0
         angleReset = 0
         complete = 0
         sequenceStep += 1
         speedSet = 0
+        dist = 0 
+        turn = 0
+        move = 0
+        getEncoder()
         time.sleep(5)
 
       
@@ -287,14 +296,17 @@ while True:
         
         if turn:  
             move = 0
-            if turnSetPoint - turnAngle > 10:
-                right = 1
-                left = 0
-            elif turnSetPoint - turnAngle < -10:
-                #left = 1
+            print(turnSetPoint)
+            if turnSetPoint - turnAngle > 1:
                 right = 0
+                left = 1
+            elif turnSetPoint - turnAngle < -1:
+                left = 0
+                right = 1
             else:
                 print("Turn else")
+                if turn:
+                    complete = 1
                 turn = 0
                 left = 0
                 right = 0
@@ -307,14 +319,14 @@ while True:
             # Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumError   
             if (rightEncoderVal - prevRightStep > 0) and (leftEncoderVal - prevLeftStep > 0):
                 #if (rightEncoderVal - prevRightStep > speedPreset*0.5) and (leftEncoderVal - prevLeftStep > speedPreset*0.5):
-                if (abs(prevEncoderError) < abs(rightEncoderVal - leftEncoderVal)):
+                if (abs(prevEncoderError) <= abs(rightEncoderVal - leftEncoderVal)):
                     print("PID On")
-                    rightCorrection = stepCalibrate(0.00006, 0.00000, 0.00002, rightEncoderVal, prevRightStep, max(min(200, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.25)), 0), prevRightStepError, sumRightStepError)
+                    rightCorrection = stepCalibrate(0.00004, 0.00000, 0.000015, rightEncoderVal, prevRightStep, max(min(200, (speedPreset - (rightEncoderVal - leftEncoderVal)*1)), 0), prevRightStepError, sumRightStepError)
                     prevRightStepError = rightCorrection[1]
                     sumRightStepError = rightCorrection[2]
                     rightMotorSpeed += rightCorrection[0]
                 
-                    leftCorrection = stepCalibrate(0.00006, 0.00000, 0.00002, leftEncoderVal, prevLeftStep, max(min(200, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.25)), 0), prevLeftStepError, sumLeftStepError)
+                    leftCorrection = stepCalibrate(0.00004, 0.00000, 0.000015, leftEncoderVal, prevLeftStep, max(min(200, (speedPreset + (rightEncoderVal - leftEncoderVal)*1)), 0), prevLeftStepError, sumLeftStepError)
                     prevLeftStepError = leftCorrection[1]
                     sumLeftStepError = leftCorrection[2]
                     leftMotorSpeed += leftCorrection[0]
@@ -333,10 +345,19 @@ while True:
                        
             #print("Set Speed: %.4f, %.4f" % (max(min(200, (speedPreset - (rightEncoderVal - leftEncoderVal)*0.25)), 0), (max(min(200, (speedPreset + (rightEncoderVal - leftEncoderVal)*0.25)), 0))))
             
+            speedDiff = (rightMotorSpeed - leftMotorSpeed)
+            if speedDiff > 0.05:
+                rightMotorSpeed -= (speedDiff-0.05)/2
+                leftMotorSpeed += (speedDiff-0.05)/2
+            elif speedDiff < -0.05:
+                rightMotorSpeed -= (speedDiff+0.05)/2
+                leftMotorSpeed += (speedDiff+0.05)/2
             
-            rightMotorSpeed = max(min(0.75, rightMotorSpeed), 0.48)
+            rightMotorSpeed = max(min(1, rightMotorSpeed), 0.48)
             #print("%.6f" % rightMotorSpeed)
-            leftMotorSpeed = max(min(0.75, leftMotorSpeed), 0.48)
+            leftMotorSpeed = max(min(1, leftMotorSpeed), 0.48)
+            
+            
             
             leftMotor.forward(leftMotorSpeed)
             rightMotor.forward(rightMotorSpeed)
@@ -351,23 +372,24 @@ while True:
         elif left:
             print("Turning Left")
             leftMotor.backward(leftMotorSpeed)
-            rightMotor.forward(rightMotorSpeed)
+            #rightMotor.forward(rightMotorSpeed)
         else:
             leftMotor.stop() 
             rightMotor.stop()
             if complete and ((rightEncoderVal - prevRightStep) == 0) and ((leftEncoderVal - prevLeftStep) == 0):
-                complete = 0 
+                complete = 0
+                
                 angleReset = 1
             
         prevRightStep = rightEncoderVal
         prevLeftStep = leftEncoderVal
-        turnAngle = (abs(leftEncoderVal)*80*math.pi/ppr)*(360/(math.pi*810))
+        turnAngle = ((rightEncoderVal-leftEncoderVal)*80*math.pi/ppr)*(360/(math.pi*810))
         #print("Turn Angle: %.4f degree" % turnAngle)
         #print("Left Turn Angle: %.4f degree" % (((abs(leftEncoderVal)*282.74/(ppr))/(1319.47))*360))
-        #print("Right: %.4f" % rightEncoderVal)
-        #print("Left: %.4f" % leftEncoderVal)
+        print("Right: %.4f" % rightEncoderVal)
+        print("Left: %.4f" % leftEncoderVal)
         print("Encoder Yaw: %.4f" % (turnAngle))
-        print("Gyro Angle: %.4f deg" % cummulativeAngle)
+        #print("Gyro Angle: %.4f deg" % cummulativeAngle)
         print("Prev Angle: %.4f deg" % prevAngle)
         dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
         print("Distance Travelled: %.2f mm" % dist)
