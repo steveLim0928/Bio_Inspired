@@ -122,7 +122,7 @@ class FrontEnd(object):
 
             self.frame = pygame.surfarray.make_surface(self.frame)
             self.screen.blit(self.frame, (0, 0))
-            pygame.display.update()
+            #pygame.display.update()
 
             time.sleep(1 / FPS)
 
@@ -206,7 +206,7 @@ class FrontEnd(object):
         #print("start Finding")
         detected,tvec,ids=self.detectAruco()
         #print("output")
-
+        tvec[1] -=40
         z_dist=self.tello.get_height()
         
         speedAlignX = 10
@@ -263,14 +263,15 @@ class FrontEnd(object):
                     print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
                     self.prev_align_bit=0
                     cv2.putText(self.frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    not self.tello.land()
+                    #not self.tello.land()
                     self.send_rc_control = False
 
             if (aligned[0] & aligned[1] & aligned[2]) == 1:
                 print("LLLLLLLLANANAD")
                 self.resetDroneCommands()
                 # time given to stabilise the drone
-                time.sleep(2)
+                print(tvec[0],tvec[1])
+                time.sleep(10)
                 #detected,tvec,ids=self.detectAruco()
                 cv2.putText(self.frame, "Land 1",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 #if (detected==1):
@@ -338,7 +339,7 @@ class FrontEnd(object):
         tvec = [0,0,0]
 
         detected=0
-        
+        print("Found Marker in mask not found :",ids)
         if ids is not None:
             print("Found Marker in mask")
             detected=1

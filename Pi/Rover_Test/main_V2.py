@@ -1,15 +1,19 @@
 from smbus import SMBus
 import datetime, threading, time
 import math
+import random
 from gpiozero import Button, Servo, Motor, RotaryEncoder
 from gpiozero.pins.pigpio import PiGPIOFactory
 import numpy as np
 import LSM6DSO
-from multiprocessing import Queue
+import pygame
 
 ####################### SETUP ####################### 
 
 factory = PiGPIOFactory()
+
+pygame.init()
+window = pygame.display.set_mode((300, 300))
 
 ##### IMU
 i2cbus = SMBus(1)
@@ -60,7 +64,7 @@ leftEncoderBuf = 0
 dist = 0
 distSetPoint = 9000
 
-ppr = 341
+ppr = 373
 rightEncoder = RotaryEncoder (10, 9, max_steps = 0, pin_factory = factory)
 leftEncoder = RotaryEncoder (22, 27, max_steps = 0, pin_factory = factory)
 
@@ -188,7 +192,7 @@ def stepCalibrate(Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumE
     return correction, prevError, sumError
         
 def distTravel(dist, rightEncoderVal, leftEncoderVal, ppr):
-    dist = (rightEncoderVal + leftEncoderVal)*251.33/(2*ppr)
+    dist = (rightEncoderVal + leftEncoderVal)*math.pi*80/(2*ppr)
     return dist
 	
 ####################### MAIN ####################### 	
@@ -214,7 +218,7 @@ print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
 print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 '''
 moveSeq = [1,0,1,0,1]
-moveDist = [5000,0,3500,0,3000]
+moveDist = [1600,0,2000,0,2000]
 rightSeq = [0,1,0,1,0]
 turnDist = [0,-90,0,90,0]
 turnAngle = 0
@@ -226,11 +230,28 @@ speedSet = 0
 while True:
     currTime = time.time()
     
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        if event.type == pygame.KEYDOWN:
+            print(pygame.key.name(event.key))
+    keys = pygame.key.get_pressed()   
+    if keys[pygame.K_i]:
+        leftServo.value = -0.5
+        rightServo.value = -0.5
+    elif keys[pygame.K_o]:
+        leftServo.value = 0
+        rightServo.value = 0
+    elif keys[pygame.K_p]:
+        leftServo.value = 0.2
+        rightServo.value = 0.2
+    
+    
     if moveSeq[sequenceStep]:
         distSetPoint = moveDist[sequenceStep]
         if speedSet == 0:
-            rightMotorSpeed = 0.64
-            leftMotorSpeed = 0.64
+            rightMotorSpeed = 0.63
+            leftMotorSpeed = 0.63
             speedSet = 1
 
     else:
@@ -243,7 +264,7 @@ while True:
                   leftMotorSpeed = 0.85
                   speedSet = 1
                   cummulativeAngle = 0
-    '''
+    
     if gyroRead:
         gyroYaw = ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
         
@@ -257,8 +278,8 @@ while True:
         cummulativeAngle = (cummulativeAngle + gyroYaw)*1 
         gyroRead = 0
         accRead = 0
-    '''
-        
+    
+       
     if angleReset:
         print("Angle Reset")
         prevAngle = turnAngle
@@ -271,7 +292,7 @@ while True:
         turn = 0
         move = 0
         getEncoder()
-        time.sleep(5)
+        time.sleep(2)
 
       
     if (currTime-prevTime) >= 0.05:
@@ -368,11 +389,11 @@ while True:
         elif right:
             print("Turning Right")
             leftMotor.forward(leftMotorSpeed)
-            #rightMotor.backward(rightMotorSpeed)
+            rightMotor.stop()
         elif left:
             print("Turning Left")
             leftMotor.backward(leftMotorSpeed)
-            #rightMotor.forward(rightMotorSpeed)
+            rightMotor.stop()
         else:
             leftMotor.stop() 
             rightMotor.stop()
@@ -398,32 +419,15 @@ while True:
             
     #print("%0.04f" % (rightEncoder.steps))
     #print("%0.04f" % (rightEncoderVal))
-    
-    
+    '''
+    if leftEncoder.steps > ppr:
+        leftMotor.stop()
+    else:
+        leftMotor.forward(0.67)
+    print("right: %.4f, left: %.4f" % (rightEncoder.steps, leftEncoder.steps))
+    '''
    
     #print("")
-
+    
 print("Closed")
 
-#Close down curses properly, inc turn echo back on!
-    
-
-
-while False:
-	
-	
-	#print("Acc: %.4f, %.4f, %.4f" % (acc))
-	
-	#print("Gyro: %.4f, %.4f, %.4f" % (gyro))
-	#print("Yaw: %.4f" % (gyro[2] - gyroCal[2]))
-	#print("Elapsed: %.4f" % (gyroTimeNew - gyroTimeOld))
-	if (abs((gyro[2] - gyroCal[2])) > 1 and gyroRead):
-		print((gyro[2] - gyroCal[2])*(gyroTimeNew - gyroTimeOld))
-		cummulativeAngle += (gyro[2] - gyroCal[2])*(gyroTimeNew - gyroTimeOld)/10
-		gyroRead = 0
-	
-	#print((gyro[2] - gyroCal[2]))
-	print(cummulativeAngle)
-	print("")
-	#time.sleep(0.01)
-	#continue
