@@ -54,6 +54,7 @@ class FrontEnd(object):
         
         # self defined variables
         self.toggle_autonomous = 0
+        self.prev_align_bit = 0
 
     # function that continuosly runs to retrieve user inputs(keystrokes) and 
     def run(self):
@@ -258,19 +259,23 @@ class FrontEnd(object):
                 command[2] = 0
                 self.up_down_velocity = 0
 
+            if (abs(tvec[0])<error_margin and abs(tvec[1])<error_margin) and (tvec[2]<500 and self.prev_align_bit==1):
+                    print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
+                    self.prev_align_bit=0
+                    cv2.putText(self.frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    not self.tello.land()
+                    self.send_rc_control = False
 
             if (aligned[0] & aligned[1] & aligned[2]) == 1:
                 print("LLLLLLLLANANAD")
                 self.resetDroneCommands()
-                #time.sleep(1)
+                # time given to stabilise the drone
+                time.sleep(2)
                 #detected,tvec,ids=self.detectAruco()
                 cv2.putText(self.frame, "Land 1",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 #if (detected==1):
-                if (abs(tvec[0])<error_margin and abs(tvec[1])<error_margin) and (tvec[2]<500):
-                    print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
-                    cv2.putText(self.frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    not self.tello.land()
-                    self.send_rc_control = False
+                self.prev_align_bit = 1
+
 
             tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])
             print(tvec_str)
