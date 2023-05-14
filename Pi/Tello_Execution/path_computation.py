@@ -61,14 +61,9 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     # Modify the parameters to make detection more lenient
  
     #set cv2 detection parameters
-    
-    
-    
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 
-
-    #detect aruco markers
-
+    #detect aruco marker
     tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
 
     print("IDs found: ", ids)   

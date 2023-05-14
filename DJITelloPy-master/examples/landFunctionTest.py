@@ -168,7 +168,7 @@ class FrontEnd(object):
         elif key == pygame.K_a or key == pygame.K_d:  # set zero yaw velocity
             self.yaw_velocity = 0
         elif key == pygame.K_t:  # takeoff
-            self.tello.takeoff()
+            #self.tello.takeoff()
             self.send_rc_control = True
         elif key == pygame.K_l:  # land
             not self.tello.land()

@@ -140,7 +140,7 @@ def run_drone():
 
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-    fly = True
+    fly = False
 
     try:
 
@@ -170,7 +170,7 @@ def run_drone():
 
         print("taking photo...")
 
-        height = take_photo(tello, image)
+        #height = take_photo(tello, image)
 
         print("photo taken")
         height = 80
@@ -192,7 +192,7 @@ def run_drone():
     #parameters: image path, height of image, rover aruco id, destination aruco id, wall aruco id, camera matrix, distortion coefficients, size of grid to segment image into for path computation
 
     print("computing path...")
-    path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs)
+    #path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs)
     print("path computed")
 
 
