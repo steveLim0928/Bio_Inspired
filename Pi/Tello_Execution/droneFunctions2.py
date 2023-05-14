@@ -14,7 +14,7 @@ def update(left_right_velocity, for_back_velocity, up_down_velocity, yaw_velocit
             up_down_velocity, yaw_velocity)
 
 def landAutoAruco(tello, frame):
-    cv2.putText(frame, "detecting",(150,240),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    #cv2.putText(frame, "detecting",(150,240),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     error_margin = 30
     #print("start Finding")
     detected,tvec,ids=detectAruco()
@@ -30,7 +30,7 @@ def landAutoAruco(tello, frame):
     if detected==1:
         detectCounter=0
         print("ids found",ids)
-        cv2.putText(frame, "aligning",(0,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        #cv2.putText(frame, "aligning",(0,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         aligned=[0,0,0]
         command =[0,0,0]
         print("initiate align::::::::")
@@ -77,7 +77,7 @@ def landAutoAruco(tello, frame):
         if (abs(tvec[0])<error_margin and abs(tvec[1])<error_margin) and (tvec[2]<500 and prev_align_bit==1):
                 print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
                 prev_align_bit=0
-                cv2.putText(frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                #cv2.putText(frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 not tello.land()
                 send_rc_control = False
 
@@ -108,7 +108,7 @@ def landAutoAruco(tello, frame):
 def resetDroneCommands(self):  
     return 0,0,0,0
 
-def detectAruco(frame, tello):
+def detectAruco(frame):
     """
     For future work try to reinitialise the frame for the downward camera and front camera seperately
     """
@@ -116,7 +116,7 @@ def detectAruco(frame, tello):
     ### --- Detecting aruco marker and calculating distance
     #print("detecting")
     #marker width and height 
-    marker_size = 80 #mm        #maybe in meters 
+    marker_size = 150 #mm        #maybe in meters 
 
     #initialise camera calibration matrix
 
@@ -150,13 +150,13 @@ def detectAruco(frame, tello):
     tvec = [0,0,0]
 
     detected=0
-    
+    print("checking ids: ", tvec)
     if ids is not None:
         print("Found Marker in mask")
         detected=1
         #print("ids found",ids)
         #draw box around the aruco markers
-        aruco.drawDetectedMarkers(frame,corners,ids)
+        #aruco.drawDetectedMarkers(frame,corners,ids)
         
         #get 3D pose of each and every aruco marker
         #get rotational and translational vectors
@@ -165,13 +165,13 @@ def detectAruco(frame, tello):
         rvec = rvec_list_all[0][0]
         tvec = tvec_list_all[0][0]
     
-        aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
+        #aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
         tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])
         rvec_str= "x_r=%4.0f y_r=%4.0f z_r=%4.0f"%(rvec[0],rvec[1],rvec[2])
         #print("rvec",rvec_str)
-        cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
+        #cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
     
     #else:
         #print("illa")
-    return detected, tvec, ids
+    return detected, tvec, ids, corners
 

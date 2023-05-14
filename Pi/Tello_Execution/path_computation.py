@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 # Load image
 import cv2.aruco as aruco
+from droneFunctions2 import detectAruco
 
 def get_pixels_inside_corners(corners):
     """
@@ -49,12 +50,12 @@ def compute_distance(pixel_x, pixel_y, camera_matrix, dist_coeffs, z):
 
 
 # assigns rover, wall or destination or neither to blocks of the segmented grid of the picture
-def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_marker_ID, camera_matrix, distortion_coefficients):
+def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
+                      destination_marker_ID, camera_matrix, distortion_coefficients):
     
     img = cv2.imread(image_path)
 
     # Define the ArUco dictionary
-    marker_size = 15
 
 
 
@@ -64,7 +65,7 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 
     #detect aruco marker
-    tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
+    detected, tvec, ids, corners = detectAruco(img)
 
     print("IDs found: ", ids)   
 
@@ -106,52 +107,6 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     # Return the pixel coordinates for each marker type
     return wall_pixels, rover_pixels, destination_pixels, tvec[2]  
 
-def detectAruco( frame, camera_matrix, camera_distortion):
-    """
-    For future work try to reinitialise the frame for the downward camera and front camera seperately
-    """
-    
-    ### --- Detecting aruco marker and calculating distance
-    #marker width and height 
-    marker_size = 70 #mm        
-
-    #initialise camera calibration matrix
-
-    #define the aruco marker spec 
-    #it is 4x4_250 series
-    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
-
-    #convert the frame to grayscale
-    gray_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-
-    #detect aruco markers
-    corners, ids , rejected = aruco.detectMarkers(frame,aruco_dict, camera_matrix, camera_distortion)  
-
-    # Draw the detected markers on the original image
-    image_with_markers = frame.copy()
-
-    detected=0
-    
-    if ids is not None:
-        detected=1
-        #print("ids found",ids)
-        #draw box around the aruco markers
-        aruco.drawDetectedMarkers(frame,corners)
-        aruco.drawDetectedMarkers(frame, rejected)
-        #get 3D pose of each and every aruco marker
-        #get rotational and translational vectors
-        rvec_list_all, tvec_list_all, _objPoints = aruco.estimatePoseSingleMarkers(corners,marker_size,camera_matrix,camera_distortion)
-        
-        rvec = rvec_list_all[0][0]
-        tvec = tvec_list_all[0][0]
-    
-        #aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
-        tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])
-        rvec_str= "x_r=%4.0f y_r=%4.0f z_r=%4.0f"%(rvec[0],rvec[1],rvec[2])
-        #print("rvec",rvec_str)
-        cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
-
-    return tvec, ids, corners
 
 
 #reduces image to grid with size n x n

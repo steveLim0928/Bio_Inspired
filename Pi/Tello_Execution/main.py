@@ -31,7 +31,7 @@ rover_thread.join()'''
 
 try:
     movements = run_drone()
-    movements = [(0,0,1),(1,0,0),(0,1,0)]
-    runRover(movements)
+    #movements = [(1,0,0)]
+    #runRover(movements)
 except KeyboardInterrupt():
     tello.land()

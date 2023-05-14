@@ -23,7 +23,7 @@ def take_photo(tello, image):
             
             frame = frame.frame
 
-            detected, tvec, ids = detectAruco(frame, tello)
+            detected, tvec, ids, corners = detectAruco(frame)
 
             if ids is not None:
                 print("IDs: ", ids)         
@@ -168,7 +168,7 @@ def run_drone():
 
         print("taking photo...")
 
-        #height = take_photo(tello, image)
+        height = take_photo(tello, image)
 
         print("photo taken")
         height = 80

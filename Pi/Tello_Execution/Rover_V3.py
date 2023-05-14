@@ -208,11 +208,14 @@ def runRover(instruction):
     ####################### MAIN #######################    
         
     # 1 = forward, 2 = turn, 3 = charge, 4 = charge release
-
+    global movemet
+    movement = 0
     for distance, bearing, chargeSeq in instruction:
         movement = distance
+        
         turning = bearing
         chargeSeq = chargeSeq
+    print(movement)
     global turnAngle
     turnAngle = 0
 
@@ -394,7 +397,7 @@ def runRover(instruction):
             #print("Gyro Angle: %.4f deg" % cummulativeAngle)
             #print("Prev Angle: %.4f deg" % prevAngle)
             dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
-            #print("Distance Travelled: %.2f mm" % dist)
+            print("Distance Travelled: %.2f mm" % dist)
                 #print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
                 #print("%0.04f" % (rightEncoder.steps))
             
