@@ -93,6 +93,11 @@ complete = 0
 leftServo = Servo (12, min_pulse_width = 0.0005, max_pulse_width = 0.0025, pin_factory = factory)
 rightServo = Servo (16, min_pulse_width = 0.0005, max_pulse_width = 0.0025, pin_factory = factory)
 
+rightEndSw = Button(14, pull_up = False, bounce_time = 0.1, pin_factory = factory)
+rightTravelSw = Button(15, pull_up = False, bounce_time = 0.1, pin_factory = factory)
+leftEndSw = Button(7, pull_up = False, bounce_time = 0.1, pin_factory = factory)
+leftTravelSw = Button(18, pull_up = False, bounce_time = 0.1, pin_factory = factory)
+
 ####################### FUNCTIONS ####################### 
 
 ##### IMU
@@ -163,6 +168,65 @@ def IMU_Acc_Cal():
 INT1.when_pressed = LSM6DSO_readAcc
 INT2.when_pressed = LSM6DSO_readGyro
 
+movementComplete = 0
+rightForward = 0
+rightBackward = 0
+leftForward = 0
+leftBackward = 0
+
+chargeCount = 0
+
+def rightServoStop():
+    global movementComplete, rightForward, rightBackward, chargeCount
+    rightServo.value = 0
+    chargeCount += 1
+    rightForward = 0
+    rightBackward = 0
+    print("End Reached")
+    
+def leftServoStop():
+    global movementComplete, leftForward, leftBackward, chargeCount
+    leftServo.value = 0
+    chargeCount += 1
+    leftForward = 0
+    leftBackward = 0
+    print("End Reached")
+
+def servoMove():
+    global movementComplete, rightForward, rightBackward, leftForward, leftBackward
+    if ~movementComplete:
+        if rightForward:
+            rightServo.value = 0.3
+            movementComplete = 1
+        elif rightBackward:
+            rightServo.value = -0.6
+            movementComplete = 1
+        if leftForward:
+            leftServo.value = 0.3
+            movementComplete = 1
+        elif leftBackward:
+            leftServo.value = -0.6
+            movementComplete = 1
+
+def chargingMechanism(charge):
+    global movementComplete, rightForward, rightBackward, leftForward, leftBackward
+    if charge == 1:
+        rightForward = 1
+        leftForward = 1
+        movementComplete = 0
+        servoMove()
+    elif charge == 2:
+        rightBackward = 1
+        leftBackward = 1
+        movementComplete = 0
+        servoMove()
+        
+
+rightEndSw.when_pressed = rightServoStop
+rightTravelSw.when_pressed = rightServoStop
+leftEndSw.when_pressed = leftServoStop
+leftTravelSw.when_pressed = leftServoStop
+
 
 # ENCODER UPDATES
 
@@ -217,19 +281,27 @@ accCal = IMU_Acc_Cal();
 print("Gyro calibrated: %.04f, %.04f, %.04f" % gyroCal)
 print("Acc calibrated: %.04f, %.04f, %.04f" % accCal)
 '''
-moveSeq = [1,0,1,0,1]
-moveDist = [1600,0,2000,0,2000]
-rightSeq = [0,1,0,1,0]
-turnDist = [0,-90,0,90,0]
+# 1 = forward, 2 = turn, 3 = charge, 4 = charge release
+seq = [4]
+seqTarget = [0,0,0]
 turnAngle = 0
 
 sequenceStep = 0
 
 speedSet = 0
 
+chargingMechanismStart = 0
+
 while True:
     currTime = time.time()
-    
+    '''
+    if temp == 0:
+        chargingMechanism(1)
+        temp = 1
+    '''
+    #rightServoStop()
+    #leftServoStop()
+    '''
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
@@ -245,18 +317,19 @@ while True:
     elif keys[pygame.K_p]:
         leftServo.value = 0.2
         rightServo.value = 0.2
+    '''
     
-    
-    if moveSeq[sequenceStep]:
-        distSetPoint = moveDist[sequenceStep]
+    if seq[sequenceStep] == 1:
+        distSetPoint = seqTarget[sequenceStep]
         if speedSet == 0:
-            rightMotorSpeed = 0.63
-            leftMotorSpeed = 0.63
+            rightMotorSpeed = 0.65
+            leftMotorSpeed = 0.65
             speedSet = 1
+            move = 1
 
     else:
-        if rightSeq[sequenceStep]:
-            turnSetPoint = (turnDist[sequenceStep] - prevAngle)*1.2
+        if seq[sequenceStep] == 2:
+            turnSetPoint = (seqTarget[sequenceStep] - prevAngle)*1.2
             turn = 1
             
             if speedSet == 0:
@@ -264,7 +337,7 @@ while True:
                   leftMotorSpeed = 0.85
                   speedSet = 1
                   cummulativeAngle = 0
-    
+    '''
     if gyroRead:
         gyroYaw = ((gyro[2] - gyroCal[2]))*(gyroTimeNew - gyroTimeOld)/10
         
@@ -278,7 +351,7 @@ while True:
         cummulativeAngle = (cummulativeAngle + gyroYaw)*1 
         gyroRead = 0
         accRead = 0
-    
+    '''
        
     if angleReset:
         print("Angle Reset")
@@ -293,6 +366,13 @@ while True:
         move = 0
         getEncoder()
         time.sleep(2)
+        
+    if chargeCount == 2:
+        print("charge complete")
+        chargingMechanismStart = 0
+        chargeCount = 0
+        sequenceStep += 1
+        time.sleep(2)
 
       
     if (currTime-prevTime) >= 0.05:
@@ -302,9 +382,7 @@ while True:
         getEncoder()
         
         prevTime = currTime
-        
-        if distSetPoint - dist > 50:
-            move = 1
+        if move:
             if distSetPoint - dist < 500:
                 speedPreset = 0
             if distSetPoint - dist < 200:
@@ -335,7 +413,7 @@ while True:
         
         
        
-        
+        print("Move: %.1f" % chargeCount)
         if move:
             # Kp, Ki, Kd, currCount, prevCount, presetCount, prevError, sumError   
             if (rightEncoderVal - prevRightStep > 0) and (leftEncoderVal - prevLeftStep > 0):
@@ -407,16 +485,23 @@ while True:
         turnAngle = ((rightEncoderVal-leftEncoderVal)*80*math.pi/ppr)*(360/(math.pi*810))
         #print("Turn Angle: %.4f degree" % turnAngle)
         #print("Left Turn Angle: %.4f degree" % (((abs(leftEncoderVal)*282.74/(ppr))/(1319.47))*360))
-        print("Right: %.4f" % rightEncoderVal)
-        print("Left: %.4f" % leftEncoderVal)
-        print("Encoder Yaw: %.4f" % (turnAngle))
+        #print("Right: %.4f" % rightEncoderVal)
+        #print("Left: %.4f" % leftEncoderVal)
+        #print("Encoder Yaw: %.4f" % (turnAngle))
         #print("Gyro Angle: %.4f deg" % cummulativeAngle)
-        print("Prev Angle: %.4f deg" % prevAngle)
+        #print("Prev Angle: %.4f deg" % prevAngle)
         dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
-        print("Distance Travelled: %.2f mm" % dist)
+        #print("Distance Travelled: %.2f mm" % dist)
             #print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
             #print("%0.04f" % (rightEncoder.steps))
+        if seq[sequenceStep] == 3 and chargingMechanismStart == 0:
+            chargingMechanism(1)
+            chargingMechanismStart = 1
+        elif seq[sequenceStep] == 4 and chargingMechanismStart == 0:
+            chargingMechanism(2)
+            chargingMechanismStart = 1
             
+        print(seq[sequenceStep])
     #print("%0.04f" % (rightEncoder.steps))
     #print("%0.04f" % (rightEncoderVal))
     '''
