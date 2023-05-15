@@ -140,7 +140,7 @@ def run_drone():
 
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-    fly = False
+    fly = True
 
     try:
 
