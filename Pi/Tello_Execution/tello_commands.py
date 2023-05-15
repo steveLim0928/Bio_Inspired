@@ -25,12 +25,10 @@ def take_photo(tello, image):
 
             detected, tvec, ids = detectAruco(frame, tello)
 
-
-            
             if ids is not None:
                 print("IDs: ", ids)         
-                #if 1 in ids and 2 in ids and len(ids) == 5:
-                if 0 in ids and 2 in ids and len(ids) == 5:
+                if 1 in ids and 0 in ids:
+                #if 0 in ids and 2 in ids and len(ids) == 5:
                     print((dist_z + dist_z2) /2)
                     break
                     print("ALL IDs Detected")
@@ -140,7 +138,7 @@ def run_drone():
 
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-    fly = True
+    fly = False
 
     try:
 
@@ -192,7 +190,7 @@ def run_drone():
     #parameters: image path, height of image, rover aruco id, destination aruco id, wall aruco id, camera matrix, distortion coefficients, size of grid to segment image into for path computation
 
     print("computing path...")
-    #path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs)
+    path = find_path(image, height, 0, 2, 1, camera_matrix, dist_coeffs)
     print("path computed")
 
 
