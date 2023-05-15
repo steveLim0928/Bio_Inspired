@@ -50,7 +50,7 @@ def land(tello, camera_matrix, dist_coeffs):
  
         aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 
-        marker_size = 15
+        marker_size = 150
 
         dist_x = 100
         dist_y = 100
