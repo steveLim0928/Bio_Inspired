@@ -23,7 +23,7 @@ def take_photo(tello, image):
             
             frame = frame.frame
 
-            detected, tvec, ids = detectAruco(tello, frame)
+            detected, tvec, ids = detectAruco(frame, tello)
 
 
             
