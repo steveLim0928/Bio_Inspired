@@ -17,3 +17,17 @@ direct_distance = math.sqrt(tot_x**2 + tot_y **2)
 
 
 print("FINAL_DISTANCE: ", direct_distance)
+
+
+
+
+# DESIRED FORMAT: DISTANCE, ANGLE, CHARGING
+test_values = [[0,0,1], [0,90, 0], [30, 0,0], [0,-90,0],[30, 0,0], [0,90,0], [30,0,0],[0,90,0],[30,0,0],[0,-90,0],[30,0,0], [0,0,1]]
+
+
+
+
+test_2_values = [[30, 90], [30,-90], [30,90],[30,90],[30,-90]]
+
+
+test_3_values = [[0,90], [[3, 0] for x in range(10)], [0,-90], [[3, 0] for x in range(10)], [0,90],  [[3, 0] for x in range(10)],[0,90], [[3, 0] for x in range(10)],[0,-90], [[3, 0] for x in range(10)]]
