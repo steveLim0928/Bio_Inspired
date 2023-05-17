@@ -12,8 +12,14 @@ from droneFunctions2 import detectAruco
 # Takes photo using bottom camera, saves as image parameter name
 def take_photo(tello, image):
 
-
+        dist_z = tello.get_distance_tof()
+        
+        
+        tello.move_up(220-dist_z)
+        tello.move_forward(50)
+        counter = 0
         while True:
+            counter += 1
             dist_z = tello.get_distance_tof()
             # take a picture with the bottom camera
             frame = tello.get_frame_read()
@@ -21,25 +27,37 @@ def take_photo(tello, image):
             dist_z2 = tello.get_distance_tof()
 
             
+            
+            
             frame = frame.frame
+            
+            detected, tvec, ids, corners = detectAruco(frame, tello)
+            
+            cv2.imshow("window",frame)
 
-            detected, tvec, ids, corners = detectAruco(frame)
-
+            print(ids)
             if ids is not None:
                 print("IDs: ", ids)         
-                if 1 in ids and 0 in ids and len(ids) == 7:
+                if 2 in ids and 0 in ids and len(ids) == 3:
                 #if 0 in ids and 2 in ids and len(ids) == 5:
                     print((dist_z + dist_z2) /2)
                     print("ALL IDs Detected")
 
                     break
                     
+            if counter % 100 == 0:
+                tello.move_down(30)
+            if counter % 200 == 0:
+                tello.move_up(40)
                 
+        tello.move_back(50)
 
 
         # save the picture to a file
         print("writing")
+        cv2.imwrite(image + "_uncropped", frame)
 
+        frame = frame[0:240,0:320]
         cv2.imwrite(image, frame)
         #path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs, compress_factor=50)
         # return average distance away from floor

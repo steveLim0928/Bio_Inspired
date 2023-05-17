@@ -5,7 +5,7 @@ from threading import Thread
 
 from tello_commands import run_drone
 from Rover_V3 import runRover
-
+import time
 # Define the IP address and port for the video stream
 '''VIDEO_HOST = 'raspberry-pi-ip-address'
 VIDEO_PORT = 8000
@@ -31,7 +31,10 @@ rover_thread.join()'''
 
 try:
     movements = run_drone()
-    #movements = [(1,0,0)]
-    #runRover(movements)
+    print("MOVEMENTS: ", movements)
+    time.sleep(1)
+    # -90 rotate clockwise
+    #movements = [(1000,0,0)]
+    runRover(movements)
 except KeyboardInterrupt():
     tello.land()

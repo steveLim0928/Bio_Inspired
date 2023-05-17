@@ -5,12 +5,9 @@ import numpy as np
 import cv2
 # Load image
 import cv2.aruco as aruco
-<<<<<<< HEAD
 import math
-=======
-from droneFunctions2 import detectAruco
+#from droneFunctions2 import detectAruco
 
->>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 def get_pixels_inside_corners(corners):
     """
     Given a list of four tuples representing pixel coordinates of the four corners of a rectangle,
@@ -58,12 +55,8 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
                       destination_marker_ID, camera_matrix, distortion_coefficients):
     
     img = cv2.imread(image_path)
-
     # Define the ArUco dictionary
-<<<<<<< HEAD
     marker_size = 150
-=======
->>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 
 
 
@@ -74,16 +67,19 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
     
     
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
-
-<<<<<<< HEAD
-
+    counter = 0
+    notAll = True
     #detect aruco markers
-
-    tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
-=======
+    while notAll:
+        counter += 1
+        tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
+        if ids is not None:
+            if 1 in ids and 2 in ids and 0 in ids:
+                notAll = False
+        if counter == 20:
+            notAll = False
     #detect aruco marker
-    detected, tvec, ids, corners = detectAruco(img)
->>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
+    #tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
 
     print("IDs found: ", ids)   
 
@@ -125,7 +121,6 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
     # Return the pixel coordinates for each marker type
     return wall_pixels, rover_pixels, destination_pixels, tvec[2]  
 
-<<<<<<< HEAD
 def detectAruco( frame, camera_matrix, camera_distortion):
     """
     For future work try to reinitialise the frame for the downward camera and front camera seperately
@@ -151,13 +146,14 @@ def detectAruco( frame, camera_matrix, camera_distortion):
     image_with_markers = frame.copy()
 
     detected=0
-    
+    tvec = [0,0,0]
+    print("CHECK IDS: ", ids)
     if ids is not None:
         detected=1
         #print("ids found",ids)
         #draw box around the aruco markers
-        aruco.drawDetectedMarkers(frame,corners)
-        aruco.drawDetectedMarkers(frame, rejected)
+        #aruco.drawDetectedMarkers(frame,corners)
+        #aruco.drawDetectedMarkers(frame, rejected)
         #get 3D pose of each and every aruco marker
         #get rotational and translational vectors
         rvec_list_all, tvec_list_all, _objPoints = aruco.estimatePoseSingleMarkers(corners,marker_size,camera_matrix,camera_distortion)
@@ -172,14 +168,12 @@ def detectAruco( frame, camera_matrix, camera_distortion):
         cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
 
     return tvec, ids, corners
-=======
->>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 
 
 #reduces image to grid with size n x n
 def compress_image(image, image_path, n,m,  rover_marker_ID, wall_marker_ID, destination_marker_ID, camera_matrix, distortion_coefficients):
     high_compress_factor = True
-    wall_avoidance_value = 1
+    wall_avoidance_value = 2
 
     # divide the image into n x n blocks and compute the colour of each block
     block_width = image.width // n  
@@ -325,37 +319,60 @@ def astar(array, start, dest):
     # If we haven't found the destination, return None
     return None
 
-def calculate_direction(x, y):
+def calculate_direction(x, y, x0, y0):
     # Calculate the angle in radians
-    radian = math.atan2(y, x)
-
-    # Convert the angle to degrees
-    degree = math.degrees(radian)
     
-    return degree
+    
+    new_x = x - x0
+    new_y = y - y0
+    
+    if new_x > 100 and new_y > 100:
+        return -90
+    elif new_x < -100 and new_y > 100:
+        return -90
+    
+    elif new_x > 100 and new_y < -100:
+        return 90
+    elif new_x < -100 and new_y < -100:
+        return 90
+    else:
+        return 0
+    # Convert the angle to degrees
+    
 
 def reformat_path(movements):
     formatted_movements = []
-    formatted_movements.append((0,0,1))
+    #formatted_movements.append((0,0,1))
     turn = False
-    direction = 0
+
     direction_change = 0
     distance = 0
-    print(movements)
+    direction = 0
+    print("ORIGINAL MOVEMENTS: ", movements)
+    last_movement_x = 200
+    last_movement_y = 0
+    
+    
     for (movement_x, movement_y) in movements:
         
-        new_direction =   calculate_direction(movement_x, movement_y)
-        direction_change = new_direction - direction
-        direction =  new_direction
-        print(direction)
-        if direction_change > 60:
+        new_direction =  -calculate_direction(movement_x, movement_y, last_movement_x, last_movement_y)
+        direction_change = new_direction
+        
+        
+        
+        print(direction_change)
+        if direction_change > 70:
+            distance -= 400
             formatted_movements.append((distance, 0, 0))
             formatted_movements.append((0,90,0))
             distance = 0    
-        elif direction_change < -60:
+        elif direction_change < -70:
+            distance += 400
             formatted_movements.append((distance, 0, 0))
             formatted_movements.append((0,-90,0))
-            distane = 0
+            distance = 0
+        last_movement_x = movement_x
+        last_movement_y = movement_y
         
         
         distance += math.sqrt(movement_x**2 + movement_y**2)
@@ -363,7 +380,7 @@ def reformat_path(movements):
     formatted_movements.append((distance, 0, 0))
 
 
-    formatted_movements.append((0,0,1))
+    #formatted_movements.append((0,0,1))
 
         
     return formatted_movements
@@ -372,10 +389,14 @@ def reformat_path(movements):
 
 
 # finds real world distance of series of movements from rover to destination avoiding walls
-def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coefficients,compress_factor_height=32, compress_factor_width=72):
+def find_path(image_path, height, r_ID,
+w_ID, d_ID, camera_matrix, dist_coefficients,compress_factor_height=16,
+              compress_factor_width=12):
 
     # open image 
     image = Image.open(image_path)
+    
+    
     #if image.mode == 'CMYK':
     #    image = image.convert('RGB')
     pixels = image.load()
@@ -384,12 +405,10 @@ def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coeffici
     rover = None
     destination = None
     # compress image
-    print("Tello-Python-master")
 
     compressed_image, start, dest, z = compress_image(image, image_path, compress_factor_height, compress_factor_width, r_ID, w_ID, d_ID, camera_matrix, dist_coefficients)
     
 
-    print("Tello-Python-maste")
 
     # find path  
     path = astar(compressed_image, start, dest)
@@ -428,8 +447,7 @@ def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coeffici
         # computes real world distance of center of block - real world distance of center of last block
         # appends to path_distances, containing all distances to travel
         path_distances.append((np.array(compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)) - np.array(dist_from)).tolist())
-        print((np.array(compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)) - np.array(dist_from)).tolist())
-        dist_from = compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)
+        dist_from = compute_distance(block_centre_x,block_centre_y, camera_matrix, dist_coefficients, z)
 
     new_path = reformat_path(path_distances)
     image.save('output.png')
@@ -459,7 +477,6 @@ def get_aruco_distance(img_path, camera_matrix, dist_coeffs):
     rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix, dist_coeffs)
 
 
-    print(np.shape(rejectedImgPoints))
     print("IDs found: ", ids)
     for marker in range(len(ids)):
 
@@ -499,5 +516,5 @@ if __name__ == "__main__":
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
     #get_aruco_distance("bottom_camera.jpg", camera_matrix, dist_coeffs)
-    path = find_path("bottom_camera.jpg", 110, 1, 0, 2, camera_matrix, dist_coeffs)
+    path = find_path("bottom_camera.jpg", 200, 0, 1, 2, camera_matrix, dist_coeffs)
     print(path)
