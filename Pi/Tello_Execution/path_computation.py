@@ -5,7 +5,12 @@ import numpy as np
 import cv2
 # Load image
 import cv2.aruco as aruco
+<<<<<<< HEAD
 import math
+=======
+from droneFunctions2 import detectAruco
+
+>>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 def get_pixels_inside_corners(corners):
     """
     Given a list of four tuples representing pixel coordinates of the four corners of a rectangle,
@@ -49,12 +54,16 @@ def compute_distance(pixel_x, pixel_y, camera_matrix, dist_coeffs, z):
 
 
 # assigns rover, wall or destination or neither to blocks of the segmented grid of the picture
-def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_marker_ID, camera_matrix, distortion_coefficients):
+def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
+                      destination_marker_ID, camera_matrix, distortion_coefficients):
     
     img = cv2.imread(image_path)
 
     # Define the ArUco dictionary
+<<<<<<< HEAD
     marker_size = 150
+=======
+>>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 
 
 
@@ -66,10 +75,15 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 
+<<<<<<< HEAD
 
     #detect aruco markers
 
     tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
+=======
+    #detect aruco marker
+    detected, tvec, ids, corners = detectAruco(img)
+>>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 
     print("IDs found: ", ids)   
 
@@ -111,6 +125,7 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     # Return the pixel coordinates for each marker type
     return wall_pixels, rover_pixels, destination_pixels, tvec[2]  
 
+<<<<<<< HEAD
 def detectAruco( frame, camera_matrix, camera_distortion):
     """
     For future work try to reinitialise the frame for the downward camera and front camera seperately
@@ -157,6 +172,8 @@ def detectAruco( frame, camera_matrix, camera_distortion):
         cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
 
     return tvec, ids, corners
+=======
+>>>>>>> 37157e572a99770aa1720b2d28f9b37b9ba41d6f
 
 
 #reduces image to grid with size n x n
