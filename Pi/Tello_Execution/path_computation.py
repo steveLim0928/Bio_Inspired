@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 # Load image
 import cv2.aruco as aruco
-
+import math
 def get_pixels_inside_corners(corners):
     """
     Given a list of four tuples representing pixel coordinates of the four corners of a rectangle,
@@ -54,16 +54,21 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID, destination_m
     img = cv2.imread(image_path)
 
     # Define the ArUco dictionary
-    marker_size = 15
+    marker_size = 150
 
 
 
     # Modify the parameters to make detection more lenient
  
     #set cv2 detection parameters
+    
+    
+    
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 
-    #detect aruco marker
+
+    #detect aruco markers
+
     tvec, ids, corners = detectAruco(img, camera_matrix, distortion_coefficients)
 
     print("IDs found: ", ids)   
@@ -113,7 +118,7 @@ def detectAruco( frame, camera_matrix, camera_distortion):
     
     ### --- Detecting aruco marker and calculating distance
     #marker width and height 
-    marker_size = 70 #mm        
+    marker_size = 150 #mm        
 
     #initialise camera calibration matrix
 
@@ -303,6 +308,51 @@ def astar(array, start, dest):
     # If we haven't found the destination, return None
     return None
 
+def calculate_direction(x, y):
+    # Calculate the angle in radians
+    radian = math.atan2(y, x)
+
+    # Convert the angle to degrees
+    degree = math.degrees(radian)
+    
+    return degree
+
+def reformat_path(movements):
+    formatted_movements = []
+    formatted_movements.append((0,0,1))
+    turn = False
+    direction = 0
+    direction_change = 0
+    distance = 0
+    print(movements)
+    for (movement_x, movement_y) in movements:
+        
+        new_direction =   calculate_direction(movement_x, movement_y)
+        direction_change = new_direction - direction
+        direction =  new_direction
+        print(direction)
+        if direction_change > 60:
+            formatted_movements.append((distance, 0, 0))
+            formatted_movements.append((0,90,0))
+            distance = 0    
+        elif direction_change < -60:
+            formatted_movements.append((distance, 0, 0))
+            formatted_movements.append((0,-90,0))
+            distane = 0
+        
+        
+        distance += math.sqrt(movement_x**2 + movement_y**2)
+        #print(distance)
+    formatted_movements.append((distance, 0, 0))
+
+
+    formatted_movements.append((0,0,1))
+
+        
+    return formatted_movements
+
+
+
 
 # finds real world distance of series of movements from rover to destination avoiding walls
 def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coefficients,compress_factor_height=32, compress_factor_width=72):
@@ -348,23 +398,26 @@ def find_path(image_path, height, r_ID, w_ID, d_ID, camera_matrix, dist_coeffici
     # find distance away from camera of starting block - set to initial distance
     block_centre_y = (path[0][0]*block_height + (path[0][0]+1) * block_height  - 1) // 2
     block_centre_x = (path[0][1]*block_width + (path[0][1]+1) * block_width - 1) // 2
+    
     dist_from = compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)
 
     path_distances = []
 
     # finds difference in real world distance of center of next block in path from previous block in path.
-    for j, i in path:
+    for j, i in path[1:]:
         block_centre_y = (j*block_height + (j+1) * block_height  - 1) // 2
         block_centre_x = (i*block_width + (i+1) * block_width - 1) // 2
 
         # computes real world distance of center of block - real world distance of center of last block
         # appends to path_distances, containing all distances to travel
-        path_distances.append((np.array(compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, height)) - np.array(dist_from)).tolist())
-        dist_from = compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, height)
+        path_distances.append((np.array(compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)) - np.array(dist_from)).tolist())
+        print((np.array(compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)) - np.array(dist_from)).tolist())
+        dist_from = compute_distance(block_centre_x, block_centre_y, camera_matrix, dist_coefficients, z)
 
+    new_path = reformat_path(path_distances)
     image.save('output.png')
 
-    return path_distances
+    return new_path
 
 
 
@@ -430,4 +483,4 @@ if __name__ == "__main__":
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
     #get_aruco_distance("bottom_camera.jpg", camera_matrix, dist_coeffs)
     path = find_path("bottom_camera.jpg", 110, 1, 0, 2, camera_matrix, dist_coeffs)
-    #print(path)
+    print(path)

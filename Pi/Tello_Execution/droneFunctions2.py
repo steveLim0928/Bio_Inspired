@@ -78,8 +78,9 @@ def landAutoAruco(tello, frame):
                 print("!!!!!!!!!!!!!!!!!!!!! !LLLLLLLLANANAD")
                 prev_align_bit=0
                 cv2.putText(frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                not tello.land()
+                tello.land()
                 send_rc_control = False
+                return True
 
         if (aligned[0] & aligned[1] & aligned[2]) == 1:
             print("LLLLLLLLANANAD")
@@ -105,10 +106,11 @@ def landAutoAruco(tello, frame):
     
     update(left_right_velocity, for_back_velocity, up_down_velocity, yaw_velocity)
 
+    return False
 def resetDroneCommands(self):  
     return 0,0,0,0
 
-def detectAruco(frame, tello):
+def detectAruco(frame, tello, marker_size):
     """
     For future work try to reinitialise the frame for the downward camera and front camera seperately
     """
@@ -116,8 +118,7 @@ def detectAruco(frame, tello):
     ### --- Detecting aruco marker and calculating distance
     #print("detecting")
     #marker width and height 
-    marker_size = 80 #mm        #maybe in meters 
-
+    #merker_size = 150
     #initialise camera calibration matrix
 
     fx = 160
@@ -150,7 +151,7 @@ def detectAruco(frame, tello):
     tvec = [0,0,0]
 
     detected=0
-    
+
     if ids is not None:
         print("Found Marker in mask")
         detected=1
@@ -160,10 +161,14 @@ def detectAruco(frame, tello):
         
         #get 3D pose of each and every aruco marker
         #get rotational and translational vectors
-        rvec_list_all, tvec_list_all, _objPoints = aruco.estimatePoseSingleMarkers(corners,marker_size,camera_matrix,camera_distortion)
-        
+        rvec_list_all, tvec_list_all, _objPoints = aruco.estimatePoseSingleMarkers(corners, e,camera_matrix,camera_distortion)
         rvec = rvec_list_all[0][0]
-        tvec = tvec_list_all[0][0]
+
+        index = np.where(ids == 0)
+
+
+        tvec = tvec_list_all[index][0]
+        tvec[1] -= 40
     
         aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
         tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])

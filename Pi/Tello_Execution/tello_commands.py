@@ -27,11 +27,12 @@ def take_photo(tello, image):
 
             if ids is not None:
                 print("IDs: ", ids)         
-                if 1 in ids and 0 in ids:
+                if 1 in ids and 0 in ids and len(ids) == 7:
                 #if 0 in ids and 2 in ids and len(ids) == 5:
                     print((dist_z + dist_z2) /2)
-                    break
                     print("ALL IDs Detected")
+
+                    break
                     
                 
 
@@ -68,51 +69,7 @@ def land(tello, camera_matrix, dist_coeffs):
             #gray_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
             #detect aruco markers
-            '''corners, ids , rejected = aruco.detectMarkers(gray_frame,aruco_dict, camera_matrix, dist_coeffs)              
-            rvec_list_all, tvec_list_all, _objPoints = aruco.estimatePoseSingleMarkers(corners,marker_size,camera_matrix,dist_coeffs)
-
-            if ids is not None:
-                print("IDs found: ", ids)
        
-                
-                if 0 in ids:
-                    for x in range(len(ids)):
-                        if ids[x] == 0:
-                       
-                            dist_x = int(tvec_list_all[x][0][0])
-                            dist_y = int(tvec_list_all[x][0][1])
-                            dist_z = tello.get_distance_tof()
-                            
-
-                            dist_y -= 4
-
-                            if dist_z < 50 and (dist_y < 3 and dist_y > -3) and (dist_x < 3 or dist_x > -3):
-                                condition_met = True  # Set the flag to True
-                                #tello.send_rc_control(0,0,0,0)
-                                break  
-
-
-
-                            if dist_z > 40:
-                                #tello.send_rc_control((dist_x/abs(dist_x)) * 30, (dist_y/abs(dist_y)) * 30, -10, 0)
-                                tello.go_xyz_speed(-dist_x, -dist_y, 40, 10 )
-                                print("MOVE")
-
-                            else:
-                                #tello.send_rc_control((dist_x/abs(dist_x)) * 30, (dist_y/abs(dist_y)) * 30, 0, 0)
-                                print("MOVE")
-
-                                tello.go_xyz_speed(-dist_x, -dist_y, 40, 10)
-                else:
-                    #tello.move_up(20)
-                    print("Move up")
-                
-                time.sleep(1)
-            
-            if condition_met:
-                break 
-
-        tello.land()'''
             condition_met = landAutoAruco(tello, frame)
         
 
@@ -138,7 +95,7 @@ def run_drone():
 
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
-    fly = False
+    fly = True
 
     try:
 
@@ -168,7 +125,7 @@ def run_drone():
 
         print("taking photo...")
 
-        #height = take_photo(tello, image)
+        height = take_photo(tello, image)
 
         print("photo taken")
         height = 80
@@ -189,9 +146,12 @@ def run_drone():
     #computes path
     #parameters: image path, height of image, rover aruco id, destination aruco id, wall aruco id, camera matrix, distortion coefficients, size of grid to segment image into for path computation
 
-    print("computing path...")
-    path = find_path(image, height, 0, 2, 1, camera_matrix, dist_coeffs)
+    print("computing path...")  
+    path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs)
     print("path computed")
+
+
+    return path
 
 
    # print("PATH: ", path)
