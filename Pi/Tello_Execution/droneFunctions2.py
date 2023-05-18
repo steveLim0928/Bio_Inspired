@@ -44,24 +44,39 @@ def landAutoAruco(tello, frame, prev_align_bit):
 
         if(abs(tvec[2])<600):
             speedAlignZ = -10
-
-        if tvec[0]>error_margin:
+        
+        if tvec[0]>60:
             command[0] = -speedAlignX
             for_back_velocity = -speedAlignX  #move back
-        elif tvec[0]<-error_margin:
+        elif tvec[0]<-60:
             command[0] = speedAlignX
             for_back_velocity = speedAlignX  #move front
+        
+        elif tvec[0]>error_margin:
+            command[0] = -5
+            for_back_velocity = -5  #move back
+        elif tvec[0]<-error_margin:
+            command[0] = 5
+            for_back_velocity = 5  #move front
         else:
             aligned[0]= 1
             command[0] = 0
             for_back_velocity = 0
-
-        if tvec[1]>error_margin:
+        
+        
+        if tvec[1]>60:
             left_right_velocity = -speedAlignY  # set left velocity
             command[1] = -speedAlignY
-        elif tvec[1]<-error_margin:
+        elif tvec[1]<-60:
             left_right_velocity = speedAlignY # set right velocity
             command[1] = speedAlignY
+        
+        elif tvec[1]>error_margin:
+            left_right_velocity = -5  # set left velocity
+            command[1] = -5
+        elif tvec[1]<-error_margin:
+            left_right_velocity = 5 # set right velocity
+            command[1] = 5
         else:
             aligned[1]=1
             command[1] = 0
@@ -87,7 +102,9 @@ def landAutoAruco(tello, frame, prev_align_bit):
 
         if (aligned[0] & aligned[1] & aligned[2]) == 1:
             print("LLLLLLLLANANAD")
-            resetDroneCommands()
+            for_back_velocity, left_right_velocity, up_down_velocity, yaw_velocity = resetDroneCommands()
+            update(tello, left_right_velocity, for_back_velocity, up_down_velocity, yaw_velocity, send_rc_control)
+
             # time given to stabilise the drone
             time.sleep(2)
             #detected,tvec,ids=self.detectAruco()
@@ -179,7 +196,7 @@ def detectAruco(frame, tello):
             tvec = tvec_list_all[index][0][0]
             print(tvec)
             #tvec = tvec_list_all[0][0]
-            tvec[1] -= 40
+            tvec[0] -= 40
         
             #aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
             tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])
@@ -206,7 +223,7 @@ def detectAruco(frame, tello):
             tvec = tvec_list_all[index][0][0]
             print(tvec)
             #tvec = tvec_list_all[0][0]
-            tvec[1] -= 40
+            tvec[0] -= 30
         
             #aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
             tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])

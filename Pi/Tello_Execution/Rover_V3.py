@@ -231,14 +231,22 @@ def runRover(instruction):
         chargingMechanismStart= 0
         
         print("Sequence: %.4f, %.4f, %.4f" % (movement, turning, chargeSeq))
+        
+        dist = 0
+        turnAngle = 0
+        distOffsetTh = 0
 
         while True:
             currTime = time.time()
             
 
             if turning == 0 and chargeSeq == 0:
-                ###print("Move")
+                print("Move")
                 distSetPoint = movement
+                if distSetPoint >= 100:
+                    distOffsetTh = (distSetPoint - 1000) * 0.1
+                else:
+                    distOffsetTh = 0
                 if speedSet == 0:
                     rightMotorSpeed = 0.65
                     leftMotorSpeed = 0.65
@@ -246,6 +254,7 @@ def runRover(instruction):
                     move = 1
 
             elif movement == 0 and chargeSeq == 0:
+                print("Turning")
                 turnSetPoint = (turning - prevAngle)*1.2
                 turn = 1
                     
@@ -256,7 +265,7 @@ def runRover(instruction):
                     cummulativeAngle = 0
                     
             elif chargeSeq == 1 and chargingMechanismStart == 0:
-                ##print("Charging Sequence")
+                print("Charging Sequence")
                 chargingMechanism(1)
                 chargingMechanismStart = 1
             elif chargeSeq == 2 and chargingMechanismStart == 0:
@@ -293,7 +302,8 @@ def runRover(instruction):
                 getEncoder()
                 
                 prevTime = currTime
-                if move & (distSetPoint - dist >= 50):
+                if move & (distSetPoint - dist >= 50 + distOffsetTh):
+                    print(distOffsetTh)
                     ##print("Distsetpoint: %.2f" % distSetPoint)
                     #if distSetPoint - dist < 500:
                     speedPreset = 0
@@ -408,7 +418,7 @@ def runRover(instruction):
                     ###print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
                     ###print("%0.04f" % (rightEncoder.steps))
                     
-        print("Actual Sequence: %.4f, %.4f" % (dist, turnAngle))                  
+        print("Actual Sequence: %.4f, %.4f, %.4f" % (dist, turnAngle, chargeSeq))                  
                 ###print(seq[sequenceStep])
 
     

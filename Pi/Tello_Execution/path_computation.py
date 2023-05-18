@@ -75,7 +75,7 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
         counter += 1
         tvec, ids, corners, z = detectAruco(img, camera_matrix, distortion_coefficients)
         if ids is not None:
-            if 1 in ids and 2 in ids and 3 in ids and len(ids) >= 6:
+            if 1 in ids and 2 in ids and 3 in ids and len(ids) >= 7:
                 notAll = False
         if counter == 20:
             notAll = False
@@ -163,10 +163,10 @@ def detectAruco( frame, camera_matrix, camera_distortion):
         z = 0
         counter = 0
         for i_d in ids:
-            if i_d != 0 or i_d != 3:
+            if i_d == 1:
                 index = np.where(ids == i_d)
                 print("height: ", tvec_list_all[index][0][2])
-                z += tvec_list_all[index][0][2]
+                z += tvec_list_all[index][0][2] + 430
                 counter += 1
         z /= counter
             
@@ -185,7 +185,7 @@ def detectAruco( frame, camera_matrix, camera_distortion):
 #reduces image to grid with size n x n
 def compress_image(image, image_path, n,m,  rover_marker_ID, wall_marker_ID, destination_marker_ID, camera_matrix, distortion_coefficients):
     high_compress_factor = True
-    wall_avoidance_value = 6
+    wall_avoidance_value = 9
 
     # divide the image into n x n blocks and compute the colour of each block
     block_width = image.width // n  
@@ -354,14 +354,14 @@ def calculate_direction(x, y, x0, y0):
 
 def reformat_path(movements):
     formatted_movements = []
-    #formatted_movements.append((0,0,1))
+    formatted_movements.append((0,0,1))
     turn = False
 
     direction_change = 0
     distance = 0
     direction = 0
     print("ORIGINAL MOVEMENTS: ", movements)
-    last_movement_x = -50
+    last_movement_x = -80
     last_movement_y = 0
     
     
@@ -396,7 +396,7 @@ def reformat_path(movements):
     formatted_movements.append((distance, 0, 0))
 
 
-    #formatted_movements.append((0,0,1))
+    formatted_movements.append((0,0,2))
 
         
     return formatted_movements
@@ -430,7 +430,7 @@ w_ID, d_ID, camera_matrix, dist_coefficients,compress_factor_height=64,
 
     # find path  
     path = astar(compressed_image, start, dest)
-
+    print("Path : ", path,start,dest)
     # draw computed path on original image
 
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)

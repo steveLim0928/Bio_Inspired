@@ -40,17 +40,17 @@ def take_photo(tello, image):
             print(ids)
             if ids is not None:
                 print("IDs: ", ids)         
-                if 2 in ids and 3 in ids and len(ids) >= 6:
+                if 2 in ids and 3 in ids and len(ids) >= 7:
                 #if 0 in ids and 2 in ids and len(ids) == 5:
                     print((dist_z + dist_z2) /2)
                     print("ALL IDs Detected")
 
                     break
                     
-            if counter % 100 == 0:
+            if counter % 150 == 0:
                 tello.move_down(30)
-            if counter % 200 == 0:
-                tello.move_up(70)
+            if counter % 300 == 0:
+                tello.move_up(60)
                 
         tello.move_back(70)
 
