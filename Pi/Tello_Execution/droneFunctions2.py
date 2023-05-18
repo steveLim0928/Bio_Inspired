@@ -13,7 +13,7 @@ def update(tello, left_right_velocity, for_back_velocity, up_down_velocity, yaw_
         tello.send_rc_control(left_right_velocity, for_back_velocity,
             up_down_velocity, yaw_velocity)
 
-def landAutoAruco(tello, frame):
+def landAutoAruco(tello, frame, prev_align_bit):
     #cv2.putText(frame, "detecting",(150,240),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     error_margin = 30
     #print("start Finding")
@@ -67,7 +67,9 @@ def landAutoAruco(tello, frame):
             command[1] = 0
             left_right_velocity=0
         
-        if tvec[2]>450:
+        if tvec[2]>1000:
+            up_down_velocity = -25
+        elif tvec[2]>450:
             command[2] = -10
             up_down_velocity = -10
         else:
@@ -81,7 +83,7 @@ def landAutoAruco(tello, frame):
                 #cv2.putText(frame, "aLanding",(90,100),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 tello.land()
                 send_rc_control = False
-                return True
+                return True, prev_align_bit
 
         if (aligned[0] & aligned[1] & aligned[2]) == 1:
             print("LLLLLLLLANANAD")
@@ -107,7 +109,8 @@ def landAutoAruco(tello, frame):
     
     update(tello, left_right_velocity, for_back_velocity, up_down_velocity, yaw_velocity, send_rc_control)
 
-    return False
+    return False, prev_align_bit
+
 def resetDroneCommands():  
     return 0,0,0,0
 
@@ -157,6 +160,7 @@ def detectAruco(frame, tello):
     if ids is not None:
         print("IDS FOUND: ", ids)
         if 0 in ids:
+            marker_size = 80
             print("Found Marker in mask")
             detected=1
             #print("ids found",ids)
@@ -182,7 +186,31 @@ def detectAruco(frame, tello):
             rvec_str= "x_r=%4.0f y_r=%4.0f z_r=%4.0f"%(rvec[0],rvec[1],rvec[2])
             #print("rvec",rvec_str)
             #cv2.putText(frame,tvec_str,(10,20),cv2.FONT_HERSHEY_PLAIN,1.5,(0,0,255),2,cv2.LINE_AA)
+        elif 3 in ids:
+            marker_size = 150
+            print("Found Marker in mask: ", ids)
+            detected=1
+            #print("ids found",ids)
+            #draw box around the aruco markers
+            #aruco.drawDetectedMarkers(frame,corners,ids)
+            
+            #get 3D pose of each and every aruco marker
+            #get rotational and translational vectors
+            rvec_list_all, tvec_list_all, _objPoints =aruco.estimatePoseSingleMarkers(corners,marker_size, camera_matrix,camera_distortion)
+            rvec = rvec_list_all[0][0]
+
+            index = np.where(ids == 3)[0]
+            print(index)
+            print(tvec_list_all)
+            
+            tvec = tvec_list_all[index][0][0]
+            print(tvec)
+            #tvec = tvec_list_all[0][0]
+            tvec[1] -= 40
         
+            #aruco.drawAxis(frame,camera_matrix,camera_distortion,rvec,tvec,30)
+            tvec_str= "x=%4.0f y=%4.0f z=%4.0f"%(tvec[0],tvec[1],tvec[2])
+            rvec_str= "x_r=%4.0f y_r=%4.0f z_r=%4.0f"%(rvec[0],rvec[1],rvec[2])
         #else:
         #print("illa")
     return detected, tvec, ids, corners

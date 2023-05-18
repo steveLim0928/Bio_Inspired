@@ -229,6 +229,8 @@ def runRover(instruction):
 
         global chargingMechanismStart
         chargingMechanismStart= 0
+        
+        print("Sequence: %.4f, %.4f, %.4f" % (movement, turning, chargeSeq))
 
         while True:
             currTime = time.time()
@@ -277,7 +279,7 @@ def runRover(instruction):
                 break
                 
             if chargeCount == 2:
-                ##print("charge complete")
+                print("charge complete")
                 chargingMechanismStart = 0
                 chargeCount = 0
                 time.sleep(2)
@@ -393,20 +395,20 @@ def runRover(instruction):
                 prevRightStep = rightEncoderVal
                 prevLeftStep = leftEncoderVal
                 turnAngle = ((rightEncoderVal-leftEncoderVal)*80*math.pi/ppr)*(360/(math.pi*810))
-                ###print("Turn Angle: %.4f degree" % turnAngle)
+                #print("Turn Angle: %.4f degree" % turnAngle)
                 ###print("Left Turn Angle: %.4f degree" % (((abs(leftEncoderVal)*282.74/(ppr))/(1319.47))*360))
                 ###print("Right: %.4f" % rightEncoderVal)
                 ###print("Left: %.4f" % leftEncoderVal)
                 ###print("Encoder Yaw: %.4f" % (turnAngle))
                 ###print("Gyro Angle: %.4f deg" % cummulativeAngle)
-                ###print("Prev Angle: %.4f deg" % prevAngle)
+                #print("Prev Angle: %.4f deg" % prevAngle)
                 dist = distTravel(dist, rightEncoderVal, leftEncoderVal, ppr)
-                ##print("Distance Travelled: %.2f mm" % dist)
+                #print("Distance Travelled: %.2f mm" % dist)
                 ##print("Move: %.2f" %move)
                     ###print("Encoder Count %0.04f, %0.04f" % (prevRightStep, prevLeftStep))
                     ###print("%0.04f" % (rightEncoder.steps))
-                
                     
+        print("Actual Sequence: %.4f, %.4f" % (dist, turnAngle))                  
                 ###print(seq[sequenceStep])
 
     

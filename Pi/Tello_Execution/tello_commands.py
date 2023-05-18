@@ -10,13 +10,15 @@ from droneFunctions2 import landAutoAruco
 from droneFunctions2 import detectAruco
 
 # Takes photo using bottom camera, saves as image parameter name
+
+
 def take_photo(tello, image):
 
         dist_z = tello.get_distance_tof()
         
         
-        tello.move_up(220-dist_z)
-        tello.move_forward(50)
+        tello.move_up(280-dist_z)
+        tello.move_forward(70)
         counter = 0
         while True:
             counter += 1
@@ -38,7 +40,7 @@ def take_photo(tello, image):
             print(ids)
             if ids is not None:
                 print("IDs: ", ids)         
-                if 2 in ids and 0 in ids and len(ids) == 3:
+                if 2 in ids and 3 in ids and len(ids) >= 6:
                 #if 0 in ids and 2 in ids and len(ids) == 5:
                     print((dist_z + dist_z2) /2)
                     print("ALL IDs Detected")
@@ -48,9 +50,9 @@ def take_photo(tello, image):
             if counter % 100 == 0:
                 tello.move_down(30)
             if counter % 200 == 0:
-                tello.move_up(40)
+                tello.move_up(70)
                 
-        tello.move_back(50)
+        tello.move_back(70)
 
 
         # save the picture to a file
@@ -79,7 +81,7 @@ def land(tello, camera_matrix, dist_coeffs):
 
         # move drone until over center of rover and at specified height
         print("CHECK")
-
+        prev_align_bit = 0
         while condition_met == False:
 
             frame_read = tello.get_frame_read()
@@ -88,7 +90,7 @@ def land(tello, camera_matrix, dist_coeffs):
 
             #detect aruco markers
        
-            condition_met = landAutoAruco(tello, frame)
+            condition_met,prev_align_bit = landAutoAruco(tello, frame,prev_align_bit)
         
 
 def keep_drone_alive(tello):
@@ -111,6 +113,15 @@ def run_drone():
 
     dist_coeffs = np.array([ 0.02252689, -0.32137224, -0.00607589, -0.00284081,  0.19866972])
 
+
+       
+    fx = 130
+    cx = 160.7
+    fy = 131.9
+    cy = 106
+
+    dist_coeffs = np.array([ 0.53889391, -0.85682489, -0.01124153,  0.01029454,  0.41007014])
+    
 
     camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
     fly = True
@@ -165,7 +176,7 @@ def run_drone():
     #parameters: image path, height of image, rover aruco id, destination aruco id, wall aruco id, camera matrix, distortion coefficients, size of grid to segment image into for path computation
 
     print("computing path...")  
-    path = find_path(image, height, 0, 1, 2, camera_matrix, dist_coeffs)
+    path = find_path(image, height, 3, 1, 2, camera_matrix, dist_coeffs)
     print("path computed")
 
 

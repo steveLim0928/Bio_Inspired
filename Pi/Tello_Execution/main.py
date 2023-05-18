@@ -31,8 +31,9 @@ rover_thread.join()'''
 
 try:
     movements = run_drone()
-    print("MOVEMENTS: ", movements)
+    #print("MOVEMENTS: ", movements)
     time.sleep(1)
+    #movements =[(1341.5401173135517, 0, 0), (0, 90, 0), (2318.595735671527, 0, 0), (0, 90, 0), (935.3344841114806, 0, 0)]
     # -90 rotate clockwise
     #movements = [(1000,0,0)]
     runRover(movements)
