@@ -58,7 +58,7 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
     img = cv2.imread(image_path)
     # Define the ArUco dictionary
     marker_size = 150
-
+    print("Pixel entered")
 
 
     # Modify the parameters to make detection more lenient
@@ -100,12 +100,14 @@ def pixel_assignments(image_path, rover_marker_ID, wall_marker_ID,
 
     else:
         print("wall marker ID not found")
+
         wall_corners = []
 
     if destination_marker_ID in ids:
         destination_corners = corners[np.where(ids == int(destination_marker_ID))[0][0]]
     else:
-        print("wall marker ID not found")
+ 
+        print("destination marker ID not found")
         destination_corners = []
 
     # Convert the corners to pixel coordinates
@@ -338,14 +340,14 @@ def calculate_direction(x, y, x0, y0):
     new_x = x - x0
     new_y = y - y0
     
-    if new_x > 50 and new_y > 50:
+    if new_x > 30 and new_y > 30:
         return -90
-    elif new_x < -50 and new_y > 50:
+    elif new_x < -30 and new_y > 30:
         return -90
     
-    elif new_x > 50 and new_y < -50:
+    elif new_x > 30 and new_y < -30:
         return 90
-    elif new_x < -50 and new_y < -50:
+    elif new_x < -30 and new_y < -30:
         return 90
     else:
         return 0
@@ -354,7 +356,7 @@ def calculate_direction(x, y, x0, y0):
 
 def reformat_path(movements):
     formatted_movements = []
-    formatted_movements.append((0,0,1))
+    #formatted_movements.append((0,0,1))
     turn = False
 
     direction_change = 0
@@ -396,7 +398,7 @@ def reformat_path(movements):
     formatted_movements.append((distance, 0, 0))
 
 
-    formatted_movements.append((0,0,2))
+    #formatted_movements.append((0,0,2))
 
         
     return formatted_movements
