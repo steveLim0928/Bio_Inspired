@@ -248,8 +248,8 @@ def runRover(instruction):
                 else:
                     distOffsetTh = 0
                 if speedSet == 0:
-                    rightMotorSpeed = 0.65
-                    leftMotorSpeed = 0.65
+                    rightMotorSpeed = 0.8
+                    leftMotorSpeed = 0.8
                     speedSet = 1
                     move = 1
 
@@ -259,8 +259,8 @@ def runRover(instruction):
                 turn = 1
                     
                 if speedSet == 0:
-                    rightMotorSpeed = 0.85
-                    leftMotorSpeed = 0.85
+                    rightMotorSpeed = 0.95
+                    leftMotorSpeed = 0.95
                     speedSet = 1
                     cummulativeAngle = 0
                     

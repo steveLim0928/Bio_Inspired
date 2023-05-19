@@ -356,7 +356,7 @@ def calculate_direction(x, y, x0, y0):
 
 def reformat_path(movements):
     formatted_movements = []
-    #formatted_movements.append((0,0,1))
+    formatted_movements.append((0,0,1))
     turn = False
 
     direction_change = 0
@@ -398,7 +398,7 @@ def reformat_path(movements):
     formatted_movements.append((distance, 0, 0))
 
 
-    #formatted_movements.append((0,0,2))
+    formatted_movements.append((0,0,2))
 
         
     return formatted_movements

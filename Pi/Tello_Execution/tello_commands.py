@@ -18,7 +18,7 @@ def take_photo(tello, image):
         
         
         tello.move_up(280-dist_z)
-        tello.move_forward(70)
+        tello.move_forward(90)
         counter = 0
         while True:
             counter += 1
@@ -52,7 +52,7 @@ def take_photo(tello, image):
             if counter % 300 == 0:
                 tello.move_up(60)
                 
-        tello.move_back(70)
+        tello.move_back(90)
 
 
         # save the picture to a file
